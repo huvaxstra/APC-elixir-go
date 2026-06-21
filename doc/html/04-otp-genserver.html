@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP & GenServer — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link active" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 4</div>
+        <h1 class="article-title">OTP & GenServer</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 4
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Agent unit, state, messages, lifecycle, supervisors
+          </span>
+          <span class="article-meta-item lang-elixir" style="font-weight:600;color:var(--accent-purple)">
+            Elixir
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-4-otp--genserver-week-4" class="article-title fade-in">Module 4: OTP & GenServer (Week 4)</h1>
+
+<h2 id="learning-objectives" class="section-title fade-in">Learning Objectives</h2>
+
+<p class="fade-in">By the end of this module, you will:</p>
+<ul class="fade-in">
+  <li>Understand GenServer as the atomic unit of an agent</li>
+  <li>Implement start_link, init, handle_call, handle_cast</li>
+  <li>Use supervisors for automatic crash recovery</li>
+  <li>Build a stateful agent with heartbeat</li>
+  <li>Understand why Discord and Jido use this pattern</li>
+</ul>
+
+<h2 id="1-the-process-model" class="section-title fade-in">1. The Process Model</h2>
+
+<p class="fade-in">Before GenServer, understand what a process is in Elixir:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># A process is lightweight, isolated, and concurrent</span>
+<span class="token-comment"># Processes communicate via messages — no shared memory</span>
+
+<span class="token-comment"># Spawn a new process</span>
+pid = <span class="token-function">spawn</span>(<span class="token-keyword">fn</span> -&gt;
+  receive <span class="token-keyword">do</span>
+    {<span class="token-atom">:hello</span>, sender} -&gt;
+      <span class="token-function">send</span>(sender, {<span class="token-atom">:world</span>, <span class="token-keyword">self</span>()})
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span>)
+
+<span class="token-comment"># Send a message to the process</span>
+<span class="token-function">send</span>(pid, {<span class="token-atom">:hello</span>, <span class="token-keyword">self</span>()})
+
+<span class="token-comment"># Receive the response</span>
+receive <span class="token-keyword">do</span>
+  {<span class="token-atom">:world</span>, from} -&gt; <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Got response from #{inspect(from)}"</span>)
+<span class="token-keyword">after</span>
+  <span class="token-number">1000</span> -&gt; <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Timeout!"</span>)
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># DEEP DIVE: Why processes?</span>
+<span class="token-comment"># - Isolation: One process crashing doesn't affect others</span>
+<span class="token-comment"># - Concurrency: Millions of processes can run simultaneously</span>
+<span class="token-comment"># - Distribution: Processes can span multiple machines</span>
+<span class="token-comment"># - No locks: Messages are copied, not shared</span>
+
+<span class="token-comment"># COMMON MISTAKE: Using processes directly</span>
+<span class="token-comment"># Raw processes are low-level — use GenServer for state management</span>
+<span class="token-comment"># GenServer handles the boilerplate (timeouts, state passing, etc.)</span></code></pre></div>
+</div>
+
+<h2 id="2-genserver-the-state-machine" class="section-title fade-in">2. GenServer: The State Machine</h2>
+
+<p class="fade-in">GenServer is a generic server — a process that:</p>
+<ol class="fade-in">
+  <li>Holds state</li>
+  <li>Receives messages</li>
+  <li>Responds to requests</li>
+  <li>Can be supervised and restarted</li>
+</ol>
+
+<p class="fade-in">Think of it as a <strong>mailbox with memory</strong>.</p>
+
+<h3 id="the-simplest-genserver" class="content-subtitle fade-in">The Simplest GenServer</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">WeatherAgent</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A simple weather agent that stores the latest reading.
+
+  This demonstrates the MINIMUM GenServer structure:
+  - start_link/1: How to start the process
+  - init/1: How to initialize state
+  - handle_call/3: How to handle synchronous requests
+  - handle_cast/2: How to handle fire-and-forget messages
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-comment"># ============================================================</span>
+  <span class="token-comment"># Client API (what other code calls)</span>
+  <span class="token-comment"># ============================================================</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Starts the agent under a supervisor.
+
+  ## Options
+
+  * `:name` - Registered name for the process
+  * `:initial_city` - City to monitor initially
+
+  ## Examples
+
+      iex&gt; WeatherAgent.start_link(name: :weather, initial_city: "</span><span class="token-type">Seattle</span><span class="token-string">")
+      {:ok, #PID&lt;0.123.0&gt;}
+
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    <span class="token-comment"># GenServer.start_link/2 starts the process and links it to the caller</span>
+    <span class="token-comment"># If the caller crashes, this process crashes too (for supervision)</span>
+    name = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:name</span>, __MODULE__)
+
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: name)
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Gets the current weather reading.
+
+  This is a SYNCHRONOUS call — it blocks until the agent responds.
+
+  Returns {:ok, reading} or {:error, reason}.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">get_reading</span>(agent \\ __MODULE__) <span class="token-keyword">do</span>
+    <span class="token-comment"># GenServer.call/2 sends a message and waits for a response</span>
+    <span class="token-comment"># This is like calling a function — it blocks</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(agent, <span class="token-atom">:get_reading</span>)
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Updates the weather reading.
+
+  This is ASYNCHRONOUS — it returns immediately.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">update_reading</span>(agent \\ __MODULE__, reading) <span class="token-keyword">do</span>
+    <span class="token-comment"># GenServer.cast/2 sends a message without waiting</span>
+    <span class="token-comment"># This is like sending a letter — no reply expected</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">cast</span>(agent, {<span class="token-atom">:update</span>, reading})
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Gets the agent's status information.
+
+  Returns a map with metadata about the agent.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">status</span>(agent \\ __MODULE__) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(agent, <span class="token-atom">:status</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ============================================================</span>
+  <span class="token-comment"># Server Callbacks (what the process runs)</span>
+  <span class="token-comment"># ============================================================</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Initializes the agent with starting state.
+
+  Called once when the process starts.
+  Returns {:ok, initial_state} or {:stop, reason}.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    initial_city = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:initial_city</span>, <span class="token-string">"Unknown"</span>)
+
+    <span class="token-comment"># The state is a map — it can hold anything</span>
+    <span class="token-comment"># This state is passed to every subsequent callback</span>
+    initial_state = %{
+      city: initial_city,
+      temperature: <span class="token-keyword">nil</span>,
+      condition: <span class="token-keyword">nil</span>,
+      humidity: <span class="token-keyword">nil</span>,
+      last_updated: <span class="token-keyword">nil</span>,
+      update_count: <span class="token-number">0</span>
+    }
+
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"WeatherAgent initialized for #{initial_city}"</span>)
+
+    {<span class="token-atom">:ok</span>, initial_state}
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handles synchronous requests (call).
+
+  The client blocks until this returns.
+
+  Callback receives:
+  - request: The message sent by GenServer.call
+  - from: {caller_pid, reference}
+  - state: Current state
+
+  Returns {:reply, response, new_state}
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:get_reading</span>, _from, state) <span class="token-keyword">do</span>
+    reading = %{
+      city: state.city,
+      temperature: state.temperature,
+      condition: state.condition,
+      humidity: state.humidity,
+      last_updated: state.last_updated
+    }
+
+    <span class="token-comment"># {:reply, response, new_state}</span>
+    <span class="token-comment"># The response is sent back to the caller</span>
+    <span class="token-comment"># The new_state replaces the old state</span>
+    {<span class="token-atom">:reply</span>, {<span class="token-atom">:ok</span>, reading}, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:status</span>, _from, state) <span class="token-keyword">do</span>
+    status = %{
+      city: state.city,
+      update_count: state.update_count,
+      has_data: state.temperature != <span class="token-keyword">nil</span>
+    }
+
+    {<span class="token-atom">:reply</span>, status, state}
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handles asynchronous requests (cast).
+
+  The client does NOT block — it continues immediately.
+
+  Callback receives:
+  - request: The message sent by GenServer.cast
+  - state: Current state
+
+  Returns {:noreply, new_state}
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_cast</span>({<span class="token-atom">:update</span>, reading}, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Update the state with the new reading</span>
+    new_state = %{
+      state |
+      temperature: reading.temperature,
+      condition: reading.condition,
+      humidity: reading.humidity,
+      last_updated: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(),
+      update_count: state.update_count + <span class="token-number">1</span>
+    }
+
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Updated #{state.city}: #{reading.temperature}°F"</span>)
+
+    <span class="token-comment"># {:noreply, new_state}</span>
+    <span class="token-comment"># No response to client — just update state</span>
+    {<span class="token-atom">:noreply</span>, new_state}
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handles code reloading (hot code upgrade).
+
+  Called when the module is recompiled while the process is running.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">code_change</span>(old_state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Migrate old state to new format if needed</span>
+    <span class="token-comment"># For now, just return the state as-is</span>
+    {<span class="token-atom">:ok</span>, old_state}
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="using-the-genserver" class="content-subtitle fade-in">Using the GenServer</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">WeatherDemo</span> <span class="token-keyword">do</span>
+  <span class="token-keyword">def</span> run <span class="token-keyword">do</span>
+    <span class="token-comment"># Start the agent</span>
+    {<span class="token-atom">:ok</span>, agent} = <span class="token-type">WeatherAgent</span>.<span class="token-function">start_link</span>(
+      name: <span class="token-atom">:demo_weather</span>,
+      initial_city: <span class="token-string">"Seattle"</span>
+    )
+
+    <span class="token-comment"># Check initial status</span>
+    <span class="token-type">IO</span>.<span class="token-function">inspect</span>(<span class="token-type">WeatherAgent</span>.<span class="token-function">status</span>(agent), label: <span class="token-string">"Initial status"</span>)
+
+    <span class="token-comment"># Update with new reading (async — returns immediately)</span>
+    <span class="token-type">WeatherAgent</span>.<span class="token-function">update_reading</span>(agent, %{
+      temperature: <span class="token-number">55.0</span>,
+      condition: <span class="token-string">"Rain"</span>,
+      humidity: <span class="token-number">80.0</span>
+    })
+
+    <span class="token-comment"># Give it a moment to process</span>
+    <span class="token-type">Process</span>.<span class="token-function">sleep</span>(<span class="token-number">100</span>)
+
+    <span class="token-comment"># Get the reading (sync — blocks until response)</span>
+    <span class="token-keyword">case</span> <span class="token-type">WeatherAgent</span>.<span class="token-function">get_reading</span>(agent) <span class="token-keyword">do</span>
+      {<span class="token-atom">:ok</span>, reading} -&gt;
+        <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Current: #{reading.city} - #{reading.temperature}°F"</span>)
+
+      {<span class="token-atom">:error</span>, reason} -&gt;
+        <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Error: #{reason}"</span>)
+    <span class="token-keyword">end</span>
+
+    <span class="token-comment"># Check status after update</span>
+    <span class="token-type">IO</span>.<span class="token-function">inspect</span>(<span class="token-type">WeatherAgent</span>.<span class="token-function">status</span>(agent), label: <span class="token-string">"After update"</span>)
+
+    <span class="token-comment"># Stop the agent gracefully</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(agent)
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="3-the-heartbeat-pattern" class="section-title fade-in">3. The Heartbeat Pattern</h2>
+
+<p class="fade-in">Agents often need to do periodic work (health checks, metrics, cleanup). The heartbeat pattern handles this.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">HeartbeatAgent</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  An agent with a heartbeat timer.
+
+  Demonstrates:
+  - Periodic messages using Process.send_after
+  - State tracking for health checks
+  - Crash recovery via supervisor
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-comment"># Heartbeat interval (30 seconds)</span>
+  @heartbeat_interval <span class="token-number">30_000</span>
+
+  <span class="token-comment"># Client API</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    name = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:name</span>, __MODULE__)
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: name)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">get_status</span>(agent \\ __MODULE__) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(agent, <span class="token-atom">:status</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">stop</span>(agent \\ __MODULE__) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(agent, <span class="token-atom">:normal</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Server Callbacks</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    interval = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:interval</span>, @heartbeat_interval)
+
+    <span class="token-comment"># Schedule the first heartbeat</span>
+    <span class="token-comment"># Process.send_after sends a message after a delay</span>
+    <span class="token-comment"># This is how we create periodic behavior</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, interval)
+
+    state = %{
+      interval: interval,
+      heartbeat_count: <span class="token-number">0</span>,
+      last_heartbeat: <span class="token-keyword">nil</span>,
+      status: <span class="token-atom">:running</span>
+    }
+
+    {<span class="token-atom">:ok</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:status</span>, _from, state) <span class="token-keyword">do</span>
+    status = %{
+      status: state.status,
+      heartbeat_count: state.heartbeat_count,
+      last_heartbeat: state.last_heartbeat,
+      uptime: <span class="token-function">calculate_uptime</span>(state)
+    }
+
+    {<span class="token-atom">:reply</span>, status, state}
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handles the heartbeat message.
+
+  This is called periodically by Process.send_after.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Do periodic work here</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Heartbeat #{state.heartbeat_count + 1}: #{DateTime.utc_now()}"</span>)
+
+    <span class="token-comment"># Update state</span>
+    new_state = %{
+      state |
+      heartbeat_count: state.heartbeat_count + <span class="token-number">1</span>,
+      last_heartbeat: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>()
+    }
+
+    <span class="token-comment"># Schedule the next heartbeat</span>
+    <span class="token-comment"># COMMON MISTAKE: Forgetting to reschedule</span>
+    <span class="token-comment"># Without this, you only get ONE heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, state.interval)
+
+    {<span class="token-atom">:noreply</span>, new_state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(msg, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Handle unexpected messages</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Unexpected message: #{inspect(msg)}"</span>)
+    {<span class="token-atom">:noreply</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> <span class="token-function">calculate_uptime</span>(state) <span class="token-keyword">do</span>
+    <span class="token-keyword">case</span> state.last_heartbeat <span class="token-keyword">do</span>
+      <span class="token-keyword">nil</span> -&gt; <span class="token-string">"Not started"</span>
+      last -&gt;
+        diff = <span class="token-type">DateTime</span>.<span class="token-function">diff</span>(<span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(), last, <span class="token-atom">:second</span>)
+        <span class="token-string">"#{diff} seconds since last heartbeat"</span>
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="4-supervisors-crash-recovery" class="section-title fade-in">4. Supervisors: Crash Recovery</h2>
+
+<p class="fade-in">Supervisors are processes that monitor other processes and restart them when they crash.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Weather.Supervisor</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  Supervises weather agents.
+
+  The supervisor ensures agents are always running.
+  If an agent crashes, it's automatically restarted.
+
+  This is the "</span>let it crash<span class="token-string">" philosophy:
+  - Don't handle every error
+  - Let the process crash
+  - The supervisor restarts it with fresh state
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">Supervisor</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    <span class="token-comment"># Start the supervisor</span>
+    <span class="token-type">Supervisor</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: __MODULE__)
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># Define child processes to supervise</span>
+    children = [
+      <span class="token-comment"># WeatherAgent with initial configuration</span>
+      {<span class="token-type">WeatherAgent</span>, <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:weather_opts</span>, [])},
+
+      <span class="token-comment"># HeartbeatAgent with 30-second interval</span>
+      {<span class="token-type">HeartbeatAgent</span>, <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:heartbeat_opts</span>, [])}
+    ]
+
+    <span class="token-comment"># Supervisor strategies:</span>
+    <span class="token-comment"># :one_for_one - Restart only the failed child</span>
+    <span class="token-comment"># :one_for_all - Restart all children if one fails</span>
+    <span class="token-comment"># :rest_for_one - Restart the failed child and all children started after it</span>
+
+    <span class="token-comment"># COMMON MISTAKE: Wrong strategy for your use case</span>
+    <span class="token-comment"># :one_for_one is usually correct for independent processes</span>
+    <span class="token-comment"># :one_for_all is for tightly coupled processes</span>
+    <span class="token-type">Supervisor</span>.<span class="token-function">init</span>(children, strategy: <span class="token-atom">:one_for_one</span>)
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># Usage</span>
+<span class="token-keyword">defmodule</span> <span class="token-type">Weather.Application</span> <span class="token-keyword">do</span>
+  <span class="token-keyword">use</span> <span class="token-type">Application</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">start</span>(_type, _args) <span class="token-keyword">do</span>
+    <span class="token-comment"># Start the supervision tree</span>
+    children = [
+      <span class="token-type">Weather.Supervisor</span>
+    ]
+
+    <span class="token-comment"># Supervisor.start_link starts the tree and monitors all children</span>
+    opts = [strategy: <span class="token-atom">:one_for_one</span>, name: <span class="token-type">Weather.Supervisor</span>]
+    <span class="token-type">Supervisor</span>.<span class="token-function">start_link</span>(children, opts)
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="5-named-processes-with-via_tuple" class="section-title fade-in">5. Named Processes with via_tuple</h2>
+
+<p class="fade-in">In distributed systems, you need to find processes by name, not just PID.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Weather.NamedAgent</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  An agent that registers with a human-readable name.
+
+  Uses via_tuple for named process registration.
+  This is essential for distributed systems where PIDs change.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-comment"># Client API</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(name) <span class="token-keyword">do</span>
+    <span class="token-comment"># Register the process with a name</span>
+    <span class="token-comment"># The name is global — can be found from any process</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, name, name: {<span class="token-atom">:via</span>, <span class="token-type">Registry</span>, {<span class="token-type">WeatherRegistry</span>, name}})
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">get_reading</span>(name) <span class="token-keyword">do</span>
+    <span class="token-comment"># Find the process by name</span>
+    <span class="token-comment"># COMMON MISTAKE: Not handling process not found</span>
+    <span class="token-keyword">case</span> <span class="token-type">Registry</span>.<span class="token-function">lookup</span>(<span class="token-type">WeatherRegistry</span>, name) <span class="token-keyword">do</span>
+      [{pid, _}] -&gt;
+        <span class="token-type">GenServer</span>.<span class="token-function">call</span>(pid, <span class="token-atom">:get_reading</span>)
+
+      [] -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-atom">:not_found</span>}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Server Callbacks</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(name) <span class="token-keyword">do</span>
+    state = %{
+      name: name,
+      temperature: <span class="token-keyword">nil</span>,
+      last_updated: <span class="token-keyword">nil</span>
+    }
+
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"NamedAgent '#{name}' started"</span>)
+    {<span class="token-atom">:ok</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:get_reading</span>, _from, state) <span class="token-keyword">do</span>
+    {<span class="token-atom">:reply</span>, {<span class="token-atom">:ok</span>, state}, state}
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># Start a registry for named processes</span>
+<span class="token-keyword">defmodule</span> <span class="token-type">Weather.Registry</span> <span class="token-keyword">do</span>
+  <span class="token-keyword">use</span> <span class="token-type">Registry</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(_opts) <span class="token-keyword">do</span>
+    <span class="token-type">Registry</span>.<span class="token-function">start_link</span>(keys: <span class="token-atom">:unique</span>, name: __MODULE__)
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="6-real-world-pattern-agent-with-heartbeat" class="section-title fade-in">6. Real-World Pattern: Agent with Heartbeat</h2>
+
+<p class="fade-in">This is how Discord and Jido implement agents:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Agent.Heartbeat</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A production-grade agent with heartbeat and health monitoring.
+
+  This pattern is used by:
+  - Discord for WebSocket connection agents
+  - Jido for autonomous agent processes
+  - Kubernetes for pod health checks
+
+  Key features:
+  - Periodic heartbeat to prove liveness
+  - State tracking for health checks
+  - Graceful shutdown
+  - Crash recovery via supervisor
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-keyword">require</span> <span class="token-type">Logger</span>
+
+  @heartbeat_interval <span class="token-number">30_000</span>  <span class="token-comment"># 30 seconds</span>
+  @health_check_timeout <span class="token-number">5_000</span> <span class="token-comment"># 5 seconds</span>
+
+  <span class="token-comment"># Client API</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    name = <span class="token-type">Keyword</span>.fetch!(opts, <span class="token-atom">:name</span>)
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: name)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">health_check</span>(agent, timeout \\ @health_check_timeout) <span class="token-keyword">do</span>
+    <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+      <span class="token-type">GenServer</span>.<span class="token-function">call</span>(agent, <span class="token-atom">:health_check</span>, timeout)
+    <span class="token-keyword">catch</span>
+      <span class="token-atom">:exit</span>, _ -&gt; {<span class="token-atom">:error</span>, <span class="token-atom">:timeout</span>}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">stop</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(agent, <span class="token-atom">:shutdown</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Server Callbacks</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    name = <span class="token-type">Keyword</span>.fetch!(opts, <span class="token-atom">:name</span>)
+    interval = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:heartbeat_interval</span>, @heartbeat_interval)
+
+    <span class="token-comment"># Schedule first heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, interval)
+
+    state = %{
+      name: name,
+      interval: interval,
+      heartbeat_count: <span class="token-number">0</span>,
+      last_heartbeat: <span class="token-keyword">nil</span>,
+      status: <span class="token-atom">:initializing</span>,
+      started_at: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(),
+      errors: []
+    }
+
+    <span class="token-type">Logger</span>.<span class="token-function">info</span>(<span class="token-string">"Agent '#{name}' started"</span>)
+
+    {<span class="token-atom">:ok</span>, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:health_check</span>, _from, state) <span class="token-keyword">do</span>
+    health = %{
+      status: state.status,
+      heartbeat_count: state.heartbeat_count,
+      last_heartbeat: state.last_heartbeat,
+      uptime_seconds: <span class="token-type">DateTime</span>.<span class="token-function">diff</span>(<span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(), state.started_at),
+      error_count: <span class="token-function">length</span>(state.errors)
+    }
+
+    <span class="token-comment"># Determine overall health</span>
+    status = <span class="token-keyword">cond</span> <span class="token-keyword">do</span>
+      state.status == <span class="token-atom">:error</span> -&gt; <span class="token-atom">:unhealthy</span>
+      state.heartbeat_count == <span class="token-number">0</span> -&gt; <span class="token-atom">:starting</span>
+      state.last_heartbeat == <span class="token-keyword">nil</span> -&gt; <span class="token-atom">:degraded</span>
+      <span class="token-keyword">true</span> -&gt; <span class="token-atom">:healthy</span>
+    <span class="token-keyword">end</span>
+
+    {<span class="token-atom">:reply</span>, %{health | status: status}, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Perform heartbeat work</span>
+    <span class="token-comment"># In real agents: send ping, check connections, update metrics</span>
+    <span class="token-type">Logger</span>.<span class="token-function">debug</span>(<span class="token-string">"Heartbeat #{state.heartbeat_count + 1}"</span>)
+
+    new_state = %{state |
+      heartbeat_count: state.heartbeat_count + <span class="token-number">1</span>,
+      last_heartbeat: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(),
+      status: <span class="token-atom">:running</span>
+    }
+
+    <span class="token-comment"># Schedule next heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, state.interval)
+
+    {<span class="token-atom">:noreply</span>, new_state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:check_health</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Internal health check</span>
+    <span class="token-comment"># Could check database, network, etc.</span>
+    {<span class="token-atom">:noreply</span>, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">terminate</span>(reason, state) <span class="token-keyword">do</span>
+    <span class="token-type">Logger</span>.<span class="token-function">info</span>(<span class="token-string">"Agent '#{state.name}' stopping: #{inspect(reason)}"</span>)
+    <span class="token-atom">:ok</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="7-complete-example-weather-monitoring-system" class="section-title fade-in">7. Complete Example: Weather Monitoring System</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Weather.Monitor</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A complete weather monitoring system with:
+  - Multiple named agents
+  - Supervisor for crash recovery
+  - Heartbeat for health monitoring
+  - REST API for querying
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-comment"># Client API</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: __MODULE__)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">register_station</span>(name, config) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(__MODULE__, {<span class="token-atom">:register</span>, name, config})
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">get_station</span>(name) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(__MODULE__, {<span class="token-atom">:get</span>, name})
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> list_stations <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(__MODULE__, <span class="token-atom">:list</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Server Callbacks</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(_opts) <span class="token-keyword">do</span>
+    state = %{
+      stations: %{},
+      last_heartbeat: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>()
+    }
+
+    <span class="token-comment"># Start heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, <span class="token-number">30_000</span>)
+
+    {<span class="token-atom">:ok</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>({<span class="token-atom">:register</span>, name, config}, _from, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Start a new agent for this station</span>
+    <span class="token-keyword">case</span> <span class="token-type">Weather.NamedAgent</span>.<span class="token-function">start_link</span>(name) <span class="token-keyword">do</span>
+      {<span class="token-atom">:ok</span>, _pid} -&gt;
+        new_stations = <span class="token-type">Map</span>.<span class="token-function">put</span>(state.stations, name, config)
+        {<span class="token-atom">:reply</span>, <span class="token-atom">:ok</span>, %{state | stations: new_stations}}
+
+      {<span class="token-atom">:error</span>, reason} -&gt;
+        {<span class="token-atom">:reply</span>, {<span class="token-atom">:error</span>, reason}, state}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>({<span class="token-atom">:get</span>, name}, _from, state) <span class="token-keyword">do</span>
+    <span class="token-keyword">case</span> <span class="token-type">Map</span>.<span class="token-function">get</span>(state.stations, name) <span class="token-keyword">do</span>
+      <span class="token-keyword">nil</span> -&gt; {<span class="token-atom">:reply</span>, {<span class="token-atom">:error</span>, <span class="token-atom">:not_found</span>}, state}
+      config -&gt; {<span class="token-atom">:reply</span>, {<span class="token-atom">:ok</span>, config}, state}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:list</span>, _from, state) <span class="token-keyword">do</span>
+    {<span class="token-atom">:reply</span>, <span class="token-type">Map</span>.<span class="token-function">keys</span>(state.stations), state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Periodic maintenance</span>
+    <span class="token-type">Logger</span>.<span class="token-function">debug</span>(<span class="token-string">"Monitor heartbeat"</span>)
+
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, <span class="token-number">30_000</span>)
+
+    {<span class="token-atom">:noreply</span>, %{state | last_heartbeat: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>()}}
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h2 id="summary" class="section-title fade-in">Summary</h2>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Concept</th>
+<th>Key Point</th>
+<th>Common Mistake</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>GenServer</td>
+<td>Stateful process with callbacks</td>
+<td>Using raw processes</td>
+</tr>
+<tr>
+<td>start_link</td>
+<td>Starts and links to caller</td>
+<td>Not using under supervisor</td>
+</tr>
+<tr>
+<td>init</td>
+<td>Returns {:ok, state}</td>
+<td>Blocking in init</td>
+</tr>
+<tr>
+<td>handle_call</td>
+<td>Synchronous request-reply</td>
+<td>Long-running operations</td>
+</tr>
+<tr>
+<td>handle_cast</td>
+<td>Fire-and-forget</td>
+<td>Expecting response</td>
+</tr>
+<tr>
+<td>Supervisor</td>
+<td>Automatic crash recovery</td>
+<td>Wrong strategy</td>
+</tr>
+<tr>
+<td>Heartbeat</td>
+<td>Periodic health checks</td>
+<td>Forgetting to reschedule</td>
+</tr>
+</tbody>
+</table></div>
+
+<h2 id="next-steps" class="section-title fade-in">Next Steps</h2>
+
+<ul class="fade-in">
+  <li>Exercise 4: Build a stateful agent with heartbeat</li>
+  <li>Exercise 4: Implement supervisor for crash recovery</li>
+  <li>Exercise 4: Add health check endpoints</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="exercise-stateful-agent-with-heartbeat" class="section-title fade-in">Exercise: Stateful Agent with Heartbeat</h2>
+
+<h3 id="starter-code" class="content-subtitle fade-in">Starter Code</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Agent.Heartbeat</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  TODO: Build a stateful agent with heartbeat monitoring.
+
+  This agent should:
+  - Track state across messages
+  - Send periodic heartbeats
+  - Report health status
+  - Handle crashes gracefully
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-comment"># ============================================================</span>
+  <span class="token-comment"># PART 1: Client API</span>
+  <span class="token-comment"># ============================================================</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Start the agent with a name and optional interval.
+
+  Options:
+  - name: Required. The agent's registered name.
+  - heartbeat_interval: Optional. Default 30_000ms.
+
+  Returns {:ok, pid} or {:error, reason}.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+    <span class="token-comment"># Use GenServer.start_link/3 with Registry for named processes</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Get the agent's current status.
+
+  Returns a map with:
+  - status: :healthy | :degraded | :unhealthy
+  - heartbeat_count: integer
+  - last_heartbeat: DateTime.t() | nil
+  - uptime_seconds: integer
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">status</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+    <span class="token-comment"># Use GenServer.call/2 for synchronous request</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Send a heartbeat manually.
+
+  This triggers the same logic as the automatic heartbeat.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">heartbeat</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+    <span class="token-comment"># Use GenServer.cast/2 for fire-and-forget</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Stop the agent gracefully.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">stop</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+    <span class="token-comment"># Use GenServer.stop/3 with :normal reason</span>
+
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ============================================================</span>
+  <span class="token-comment"># PART 2: Server Callbacks</span>
+  <span class="token-comment"># ============================================================</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Initialize the agent state.
+
+  Should:
+  - Store the agent's name
+  - Initialize heartbeat_count to 0
+  - Set last_heartbeat to nil
+  - Set status to :initializing
+  - Schedule first heartbeat
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Handle status request.
+
+  Should return a map with current status information.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:status</span>, _from, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Handle heartbeat trigger.
+
+  Should:
+  - Increment heartbeat_count
+  - Update last_heartbeat to now
+  - Set status to :running
+  - Schedule next heartbeat
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+
+  <span class="token-keyword">end</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  TODO: Handle unexpected messages.
+  "</span><span class="token-string">""</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(msg, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Your code here</span>
+
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="hints" class="content-subtitle fade-in">Hints</h3>
+
+<ol class="fade-in">
+  <li><strong>start_link</strong>: Use <code>GenServer.start_link(__MODULE__, opts, name: name)</code></li>
+  <li><strong>init</strong>: Use <code>Process.send_after(self(), :heartbeat, interval)</code> to schedule</li>
+  <li><strong>handle_call</strong>: Return <code>{:reply, response, new_state}</code></li>
+  <li><strong>handle_cast</strong>: Return <code>{:noreply, new_state}</code></li>
+  <li><strong>handle_info</strong>: Return <code>{:noreply, new_state}</code></li>
+</ol>
+
+<h3 id="solution" class="content-subtitle fade-in">Solution</h3>
+
+<p class="fade-in"><details></p>
+<p class="fade-in"><summary>Click to reveal solution</summary></p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">Agent.Heartbeat</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A stateful agent with heartbeat monitoring.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenServer</span>
+
+  <span class="token-keyword">require</span> <span class="token-type">Logger</span>
+
+  @default_interval <span class="token-number">30_000</span>
+
+  <span class="token-comment"># Client API</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts) <span class="token-keyword">do</span>
+    name = <span class="token-type">Keyword</span>.fetch!(opts, <span class="token-atom">:name</span>)
+    <span class="token-type">GenServer</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: name)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">status</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">call</span>(agent, <span class="token-atom">:status</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">heartbeat</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">cast</span>(agent, <span class="token-atom">:heartbeat</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">stop</span>(agent) <span class="token-keyword">do</span>
+    <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(agent, <span class="token-atom">:normal</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Server Callbacks</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    name = <span class="token-type">Keyword</span>.fetch!(opts, <span class="token-atom">:name</span>)
+    interval = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:heartbeat_interval</span>, @default_interval)
+
+    <span class="token-comment"># Schedule first heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, interval)
+
+    state = %{
+      name: name,
+      interval: interval,
+      heartbeat_count: <span class="token-number">0</span>,
+      last_heartbeat: <span class="token-keyword">nil</span>,
+      status: <span class="token-atom">:initializing</span>,
+      started_at: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>()
+    }
+
+    <span class="token-type">Logger</span>.<span class="token-function">info</span>(<span class="token-string">"Agent '#{name}' started"</span>)
+    {<span class="token-atom">:ok</span>, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_call</span>(<span class="token-atom">:status</span>, _from, state) <span class="token-keyword">do</span>
+    health_status = <span class="token-keyword">cond</span> <span class="token-keyword">do</span>
+      state.status == <span class="token-atom">:error</span> -&gt; <span class="token-atom">:unhealthy</span>
+      state.heartbeat_count == <span class="token-number">0</span> -&gt; <span class="token-atom">:starting</span>
+      state.last_heartbeat == <span class="token-keyword">nil</span> -&gt; <span class="token-atom">:degraded</span>
+      <span class="token-keyword">true</span> -&gt; <span class="token-atom">:healthy</span>
+    <span class="token-keyword">end</span>
+
+    status = %{
+      status: health_status,
+      heartbeat_count: state.heartbeat_count,
+      last_heartbeat: state.last_heartbeat,
+      uptime_seconds: <span class="token-type">DateTime</span>.<span class="token-function">diff</span>(<span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(), state.started_at)
+    }
+
+    {<span class="token-atom">:reply</span>, status, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_cast</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    new_state = <span class="token-function">process_heartbeat</span>(state)
+    {<span class="token-atom">:noreply</span>, new_state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:heartbeat</span>, state) <span class="token-keyword">do</span>
+    new_state = <span class="token-function">process_heartbeat</span>(state)
+    {<span class="token-atom">:noreply</span>, new_state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(msg, state) <span class="token-keyword">do</span>
+    <span class="token-type">Logger</span>.<span class="token-function">warning</span>(<span class="token-string">"Unexpected message: #{inspect(msg)}"</span>)
+    {<span class="token-atom">:noreply</span>, state}
+  <span class="token-keyword">end</span>
+
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">terminate</span>(reason, state) <span class="token-keyword">do</span>
+    <span class="token-type">Logger</span>.<span class="token-function">info</span>(<span class="token-string">"Agent '#{state.name}' stopping: #{inspect(reason)}"</span>)
+    <span class="token-atom">:ok</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> <span class="token-function">process_heartbeat</span>(state) <span class="token-keyword">do</span>
+    <span class="token-type">Logger</span>.<span class="token-function">debug</span>(<span class="token-string">"Heartbeat #{state.heartbeat_count + 1}"</span>)
+
+    <span class="token-comment"># Schedule next heartbeat</span>
+    <span class="token-type">Process</span>.<span class="token-function">send_after</span>(<span class="token-keyword">self</span>(), <span class="token-atom">:heartbeat</span>, state.interval)
+
+    %{state |
+      heartbeat_count: state.heartbeat_count + <span class="token-number">1</span>,
+      last_heartbeat: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(),
+      status: <span class="token-atom">:running</span>
+    }
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<p class="fade-in"></details></p>
+
+<h2 id="common-mistakes-to-avoid" class="section-title fade-in">Common Mistakes to Avoid</h2>
+
+<ol class="fade-in">
+  <li><strong>Not using supervisors</strong>: Always put GenServers under a supervisor</li>
+  <li><strong>Forgetting to reschedule heartbeats</strong>: Process.send_after only fires once</li>
+  <li><strong>Blocking in init</strong>: Keep init fast — don't make HTTP calls</li>
+  <li><strong>Using call for fire-and-forget</strong>: Use cast when you don't need a response</li>
+  <li><strong>Not handling terminate</strong>: Clean up resources in terminate/2</li>
+</ol>
+
+<h2 id="extension-challenges" class="section-title fade-in">Extension Challenges</h2>
+
+<ol class="fade-in">
+  <li><strong>Add metrics tracking</strong>: Count messages, track response times</li>
+  <li><strong>Add persistence</strong>: Save state to disk on heartbeat</li>
+  <li><strong>Add distributed support</strong>: Use Swarm for process migration</li>
+  <li><strong>Add REST API</strong>: HTTP endpoints to query agent status</li>
+</ol>
+
+<h2 id="deep-dive-why-genserver" class="section-title fade-in">Deep Dive: Why GenServer?</h2>
+
+<p class="fade-in">GenServer solves the hardest problems in concurrent programming:</p>
+
+<ol class="fade-in">
+  <li><strong>State management</strong>: State is isolated in the process — no race conditions</li>
+  <li><strong>Crash recovery</strong>: Supervisors restart failed processes automatically</li>
+  <li><strong>Distribution</strong>: Processes can span multiple machines</li>
+  <li><strong>Scalability</strong>: Millions of lightweight processes</li>
+</ol>
+
+<p class="fade-in">This is why:</p>
+<ul class="fade-in">
+  <li><strong>Discord</strong> uses GenServer for every WebSocket connection</li>
+  <li><strong>Jido</strong> uses GenServer for every autonomous agent</li>
+  <li><strong>Phoenix</strong> uses GenServer for every channel connection</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="quiz" class="section-title fade-in">Quiz</h2>
+
+<ol class="fade-in">
+  <li>What's the difference between <code>call</code> and <code>cast</code>?</li>
+</ol>
+<ul class="fade-in">
+  <li>Answer: Call is synchronous (waits for response), cast is async (fire-and-forget)</li>
+</ul>
+
+<ol class="fade-in">
+  <li>What does <code>{:reply, response, new_state}</code> return?</li>
+</ol>
+<ul class="fade-in">
+  <li>Answer: Sends response to caller, updates state</li>
+</ul>
+
+<ol class="fade-in">
+  <li>Why use supervisors?</li>
+</ol>
+<ul class="fade-in">
+  <li>Answer: Automatic crash recovery — failed processes are restarted</li>
+</ul>
+
+<ol class="fade-in">
+  <li>What's the heartbeat pattern?</li>
+</ol>
+<ul class="fade-in">
+  <li>Answer: Periodic messages using Process.send_after for health monitoring</li>
+</ul>
+
+<ol class="fade-in">
+  <li>Why use named processes?</li>
+</ol>
+<ul class="fade-in">
+  <li>Answer: Find processes by name instead of PID — essential for distribution</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="resources" class="section-title fade-in">Resources</h2>
+
+<ul class="fade-in">
+  <li><a href="https://hexdocs.pm/elixir/GenServer.html">GenServer Documentation</a></li>
+  <li><a href="https://elixir-lang.org/getting-started/mix-otp/agents.html">OTP in Elixir</a></li>
+  <li><a href="https://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html">Supervision Trees</a></li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="course-complete" class="section-title fade-in">Course Complete!</h2>
+
+<p class="fade-in">You've learned:</p>
+<ul class="fade-in">
+  <li><strong>Module 1</strong>: Go fundamentals (types, structs, interfaces)</li>
+  <li><strong>Module 2</strong>: Go CLI & HTTP (Cobra, net/http, middleware)</li>
+  <li><strong>Module 3</strong>: Elixir fundamentals (pattern matching, pipes, immutability)</li>
+  <li><strong>Module 4</strong>: OTP & GenServer (stateful processes, supervisors)</li>
+</ul>
+
+<p class="fade-in">Next steps:</p>
+<ol class="fade-in">
+  <li>Build a hybrid Elixir/Go application</li>
+  <li>Explore Phoenix LiveView for real-time UIs</li>
+  <li>Deploy with Kubernetes and observe with Prometheus</li>
+</ol>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="03-elixir-fundamentals.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Elixir Fundamentals</a>
+        <a href="05-multi-agent-supervision.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Multi-Agent Supervision →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

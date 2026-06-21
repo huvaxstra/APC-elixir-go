@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go K8s Operators — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link active" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 11</div>
+        <h1 class="article-title">Go K8s Operators</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 11
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            controller-runtime, reconciler, CRDs
+          </span>
+          <span class="article-meta-item lang-go" style="font-weight:600;color:var(--accent-blue)">
+            Go
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-11-go-k8s-operators-week-11" class="article-title fade-in">Module 11: Go K8s Operators (Week 11)</h1>
+
+<h2 id="what-youll-learn-this-module" class="section-title fade-in">What You'll Learn This Module</h2>
+
+<p class="fade-in">By the end of this module, you'll understand how to build Kubernetes operators in Go:</p>
+
+<ol class="fade-in">
+  <li><strong>controller-runtime</strong> — the CNCF standard for building Kubernetes controllers</li>
+  <li><strong>Reconciler</strong> — the core interface that ensures desired state matches actual state</li>
+  <li><strong>CRDs (Custom Resource Definitions)</strong> — extending the Kubernetes API with your own resources</li>
+  <li><strong>Manager</strong> — running controllers, webhook servers, and caches</li>
+  <li><strong>Informers</strong> — watching for resource changes in real-time</li>
+  <li><strong>Leader election</strong> — ensuring only one operator instance is active</li>
+</ol>
+
+<p class="fade-in">This is how every production Kubernetes operator is built. The etcd operator, the Prometheus operator, the ArgoCD operator — they all use controller-runtime. If you need to manage custom resources in Kubernetes, this is the way.</p>
+
+<hr class="fade-in">
+
+<h2 id="what-is-a-kubernetes-operator" class="section-title fade-in">What Is a Kubernetes Operator?</h2>
+
+<p class="fade-in">A Kubernetes operator is a custom controller that manages custom resources. It watches for changes to resources and takes action to ensure the actual state matches the desired state.</p>
+
+<p class="fade-in">Think of it like a thermostat. You set the desired temperature (desired state). The thermostat monitors the actual temperature (actual state). If they don't match, the thermostat turns on the heater or AC (reconciliation).</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>You set: 72°F (desired state)
+Actual: 68°F (actual state)
+Thermostat turns on heater → actual becomes 72°F (reconciled)</code></pre></div>
+</div>
+
+<p class="fade-in">In Kubernetes terms:</p>
+<ul class="fade-in">
+  <li>You create a CRD (Custom Resource Definition) that defines your resource type</li>
+  <li>You create instances of that resource (desired state)</li>
+  <li>The operator watches for changes and makes the cluster match the desired state</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="project-structure" class="section-title fade-in">Project Structure</h2>
+
+<p class="fade-in">Every controller-runtime project follows the same structure:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>my-operator/
+  cmd/
+    main.go                    # Entry point — starts the manager
+  internal/
+    controller/
+      agent_controller.go      # Reconciler implementation
+    config/
+      agent_types.go           # CRD type definitions
+  config/
+    crd/
+      agent_crd.yaml           # CRD YAML for Kubernetes
+    rbac/
+      role.yaml                # RBAC permissions
+      role_binding.yaml        # RBAC binding
+    manager/
+      manager.yaml             # Deployment manifest
+  go.mod
+  go.sum</code></pre></div>
+</div>
+
+<h3 id="why-this-structure" class="content-subtitle fade-in">Why This Structure?</h3>
+
+<ul class="fade-in">
+  <li><code>cmd/main.go</code> — the entry point. Separate from business logic.</li>
+  <li><code>internal/controller/</code> — private package. Other packages can't import it.</li>
+  <li><code>internal/config/</code> — CRD type definitions. Separated from controller logic.</li>
+  <li><code>config/</code> — Kubernetes manifests. YAML files for deploying the operator.</li>
+  <li>This structure follows Go conventions: internal packages are private, and the entry point is minimal.</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="part-1-crd-type-definitions" class="section-title fade-in">Part 1: CRD Type Definitions</h2>
+
+<h3 id="what-is-a-crd" class="content-subtitle fade-in">What Is a CRD?</h3>
+
+<p class="fade-in">A CRD (Custom Resource Definition) extends the Kubernetes API. Kubernetes has built-in resources like Pods, Services, Deployments. A CRD lets you create your own resource type — like <code>Agent</code> — and Kubernetes treats it as a first-class citizen.</p>
+
+<p class="fade-in">Think of a CRD as a database schema. It defines what fields an <code>Agent</code> resource has, what types they are, and what values are valid. Once you create the CRD, you can create <code>Agent</code> resources just like you create <code>Pod</code> resources.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/config/agent_types.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/config/agent_types.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// This file defines the CRD types for the Agent resource.</span>
+<span class="token-comment">// These types are used by controller-runtime to generate</span>
+<span class="token-comment">// the CRD YAML and to deserialize Agent resources from the API server.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why separate types from controller logic?</span>
+<span class="token-comment">// Because the types are shared between:</span>
+<span class="token-comment">// 1. The controller (watches and reconciles Agents)</span>
+<span class="token-comment">// 2. The webhook server (validates and mutates Agents)</span>
+<span class="token-comment">// 3. The CRD generator (produces the YAML schema)</span>
+<span class="token-comment">// If types were in the controller, you'd have circular dependencies.</span>
+
+<span class="token-keyword">package</span> config
+
+<span class="token-keyword">import</span> (
+	metav1 <span class="token-string">"k8s.io/apimachinery/pkg/apis/meta/v1"</span>
+)
+
+<span class="token-comment">// AgentSpec defines the desired state of Agent</span>
+<span class="token-comment">// This is what the user specifies when creating an Agent resource.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: The Spec vs Status pattern</span>
+<span class="token-comment">// Spec = what the user WANTS (desired state)</span>
+<span class="token-comment">// Status = what the system HAS (actual state)</span>
+<span class="token-comment">// The controller's job is to make Status match Spec.</span>
+<span class="token-comment">// This separation is a Kubernetes convention — all resources follow it.</span>
+<span class="token-keyword">type</span> AgentSpec <span class="token-keyword">struct</span> {
+	<span class="token-comment">// Image is the container image to run for this agent</span>
+	<span class="token-comment">// +kubebuilder:validation:Required</span>
+	<span class="token-comment">// +kubebuilder:validation:Pattern=`^[\w.-]+/[\w.-]+:[\w.-]+$`</span>
+	Image <span class="token-type">string</span> <span class="token-string">`json:"image"`</span>
+
+	<span class="token-comment">// Replicas is the number of agent instances to run</span>
+	<span class="token-comment">// +kubebuilder:validation:Minimum=1</span>
+	<span class="token-comment">// +kubebuilder:validation:Maximum=10</span>
+	<span class="token-comment">// +kubebuilder:default=1</span>
+	Replicas *<span class="token-type">int32</span> <span class="token-string">`json:"replicas,omitempty"`</span>
+
+	<span class="token-comment">// Model specifies the AI model this agent uses</span>
+	<span class="token-comment">// +kubebuilder:validation:Enum=gpt-4;gpt-3.5-turbo;claude-3;llama-3</span>
+	Model <span class="token-type">string</span> <span class="token-string">`json:"model"`</span>
+
+	<span class="token-comment">// Resources defines CPU and memory requirements</span>
+	Resources AgentResources <span class="token-string">`json:"resources,omitempty"`</span>
+
+	<span class="token-comment">// Enabled determines if the agent should be running</span>
+	<span class="token-comment">// +kubebuilder:default=true</span>
+	Enabled <span class="token-type">bool</span> <span class="token-string">`json:"enabled,omitempty"`</span>
+}
+
+<span class="token-comment">// AgentResources defines resource requirements for the agent</span>
+<span class="token-comment">// These map directly to Kubernetes resource requests and limits.</span>
+<span class="token-keyword">type</span> AgentResources <span class="token-keyword">struct</span> {
+	<span class="token-comment">// CPU request (e.g., "100m" = 0.1 CPU cores)</span>
+	<span class="token-comment">// +kubebuilder:validation:Pattern=`^\d+(m)?$`</span>
+	CPURequest <span class="token-type">string</span> <span class="token-string">`json:"cpuRequest,omitempty"`</span>
+
+	<span class="token-comment">// Memory request (e.g., "128Mi")</span>
+	<span class="token-comment">// +kubebuilder:validation:Pattern=`^\d+(Mi|Gi)?$`</span>
+	MemoryRequest <span class="token-type">string</span> <span class="token-string">`json:"memoryRequest,omitempty"`</span>
+
+	<span class="token-comment">// CPU limit (e.g., "500m" = 0.5 CPU cores)</span>
+	CPULimit <span class="token-type">string</span> <span class="token-string">`json:"cpuLimit,omitempty"`</span>
+
+	<span class="token-comment">// Memory limit (e.g., "512Mi")</span>
+	MemoryLimit <span class="token-type">string</span> <span class="token-string">`json:"memoryLimit,omitempty"`</span>
+}
+
+<span class="token-comment">// AgentStatus defines the observed state of Agent</span>
+<span class="token-comment">// This is what the controller writes after reconciling.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Writing Status from outside the controller.</span>
+<span class="token-comment">// Only the controller should update Status. Other components</span>
+<span class="token-comment">// should read Status but never write it. If you need to update</span>
+<span class="token-comment">// Status from outside, send a message to the controller.</span>
+<span class="token-keyword">type</span> AgentStatus <span class="token-keyword">struct</span> {
+	<span class="token-comment">// Phase represents the current lifecycle phase of the agent</span>
+	<span class="token-comment">// +kubebuilder:validation:Enum=Pending;Running;Failed;Stopped</span>
+	Phase <span class="token-type">string</span> <span class="token-string">`json:"phase,omitempty"`</span>
+
+	<span class="token-comment">// ReadyReplicas is the number of agent instances that are ready</span>
+	ReadyReplicas <span class="token-type">int32</span> <span class="token-string">`json:"readyReplicas,omitempty"`</span>
+
+	<span class="token-comment">// Conditions represent the latest available observations</span>
+	<span class="token-comment">// of the agent's state</span>
+	Conditions []metav1.Condition <span class="token-string">`json:"conditions,omitempty"`</span>
+
+	<span class="token-comment">// LastReconciledAt is the time of the last successful reconciliation</span>
+	LastReconciledAt *metav1.Time <span class="token-string">`json:"lastReconciledAt,omitempty"`</span>
+
+	<span class="token-comment">// Message provides a human-readable status message</span>
+	Message <span class="token-type">string</span> <span class="token-string">`json:"message,omitempty"`</span>
+}
+
+<span class="token-comment">// +kubebuilder:object:root=true</span>
+<span class="token-comment">// +kubebuilder:subresource:status</span>
+<span class="token-comment">// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`</span>
+<span class="token-comment">// +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`</span>
+<span class="token-comment">// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`</span>
+
+<span class="token-comment">// Agent is the Schema for the agents API</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: The +kubebuilder comments are annotations that tell</span>
+<span class="token-comment">// the code generator how to produce the CRD YAML. They specify:</span>
+<span class="token-comment">// - +kubebuilder:object:root=true — this is a root type (not embedded)</span>
+<span class="token-comment">// - +kubebuilder:subresource:status — enable the /status subresource</span>
+<span class="token-comment">// - +kubebuilder:printcolumn — add columns to `kubectl get agents`</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Forgetting +kubebuilder:subresource:status.</span>
+<span class="token-comment">// Without it, you can't update Status separately from Spec.</span>
+<span class="token-comment">// This means a Status update also triggers a Spec update, which</span>
+<span class="token-comment">// triggers another reconciliation — an infinite loop.</span>
+<span class="token-keyword">type</span> Agent <span class="token-keyword">struct</span> {
+	metav1.TypeMeta   <span class="token-string">`json:",inline"`</span>
+	metav1.ObjectMeta <span class="token-string">`json:"metadata,omitempty"`</span>
+
+	Spec   AgentSpec   <span class="token-string">`json:"spec,omitempty"`</span>
+	Status AgentStatus <span class="token-string">`json:"status,omitempty"`</span>
+}
+
+<span class="token-comment">// +kubebuilder:object:root=true</span>
+
+<span class="token-comment">// AgentList contains a list of Agent</span>
+<span class="token-keyword">type</span> AgentList <span class="token-keyword">struct</span> {
+	metav1.TypeMeta <span class="token-string">`json:",inline"`</span>
+	metav1.ListMeta <span class="token-string">`json:"metadata,omitempty"`</span>
+	Items           []Agent <span class="token-string">`json:"items"`</span>
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="part-2-the-reconciler" class="section-title fade-in">Part 2: The Reconciler</h2>
+
+<h3 id="what-is-reconciliation" class="content-subtitle fade-in">What Is Reconciliation?</h3>
+
+<p class="fade-in">Reconciliation is the core loop of every Kubernetes controller. It works like this:</p>
+
+<ol class="fade-in">
+  <li>Something changes (a resource is created, updated, or deleted)</li>
+  <li>The controller notices the change</li>
+  <li>The controller calls <code>Reconcile()</code> to fix the discrepancy</li>
+  <li>The controller updates the Status</li>
+</ol>
+
+<p class="fade-in">The <code>Reconcile</code> function is idempotent — calling it multiple times with the same input produces the same result. This is critical because Kubernetes may deliver the same event multiple times.</p>
+
+<p class="fade-in">Think of reconciliation like a doctor's visit. The patient (resource) has a desired state (healthy) and an actual state (sick). The doctor (reconciler) examines the patient and prescribes treatment to make the actual state match the desired state.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/controller/agent_controller.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/controller/agent_controller.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// This file implements the Reconciler for Agent resources.</span>
+<span class="token-comment">// The Reconciler watches for Agent resources and ensures</span>
+<span class="token-comment">// the actual state matches the desired state.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why is Reconcile called with a Request, not the full Object?</span>
+<span class="token-comment">// Because Kubernetes delivers events as "something changed for this object."</span>
+<span class="token-comment">// The Request contains the Name and Namespace of the changed object.</span>
+<span class="token-comment">// The controller then fetches the full object from the API server.</span>
+<span class="token-comment">// This design means:</span>
+<span class="token-comment">// 1. The controller always sees the latest version of the object</span>
+<span class="token-comment">// 2. The controller doesn't need to handle stale caches</span>
+<span class="token-comment">// 3. The reconciliation logic is always working with fresh data</span>
+
+<span class="token-keyword">package</span> controller
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"context"</span>
+	<span class="token-string">"fmt"</span>
+	<span class="token-string">"time"</span>
+
+	appsv1 <span class="token-string">"k8s.io/api/apps/v1"</span>
+	corev1 <span class="token-string">"k8s.io/api/core/v1"</span>
+	<span class="token-string">"k8s.io/apimachinery/pkg/api/errors"</span>
+	metav1 <span class="token-string">"k8s.io/apimachinery/pkg/apis/meta/v1"</span>
+	<span class="token-string">"k8s.io/apimachinery/pkg/runtime"</span>
+	<span class="token-string">"k8s.io/apimachinery/pkg/types"</span>
+	ctrl <span class="token-string">"sigs.k8s.io/controller-runtime"</span>
+	<span class="token-string">"sigs.k8s.io/controller-runtime/pkg/client"</span>
+	<span class="token-string">"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"</span>
+	<span class="token-string">"sigs.k8s.io/controller-runtime/pkg/log"</span>
+
+	configv1 <span class="token-string">"github.com/myorg/my-operator/internal/config"</span>
+)
+
+<span class="token-keyword">const</span> agentFinalizer = <span class="token-string">"agent.agnt.io/finalizer"</span>
+
+<span class="token-comment">// AgentReconciler reconciles Agent objects</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// The reconciler holds references to the API client and the scheme.</span>
+<span class="token-comment">// These are injected by the manager when the controller is started.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Storing state in the reconciler struct.</span>
+<span class="token-comment">// The reconciler struct should NOT hold state between reconciliations.</span>
+<span class="token-comment">// Each reconciliation must be independent. If you store state,</span>
+<span class="token-comment">// you'll have bugs when reconciliations overlap or retry.</span>
+<span class="token-keyword">type</span> AgentReconciler <span class="token-keyword">struct</span> {
+	client.Client
+	Scheme *runtime.Scheme
+}
+
+<span class="token-comment">// +kubebuilder:rbac:groups=agnt.io,resources=agents,verbs=get;list;watch;create;update;patch;delete</span>
+<span class="token-comment">// +kubebuilder:rbac:groups=agnt.io,resources=agents/status,verbs=get;update;patch</span>
+<span class="token-comment">// +kubebuilder:rbac:groups=agnt.io,resources=agents/finalizers,verbs=update</span>
+<span class="token-comment">// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete</span>
+<span class="token-comment">// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch</span>
+
+<span class="token-comment">// Reconcile is the main reconciliation loop.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// It is called when:</span>
+<span class="token-comment">// 1. An Agent resource is created</span>
+<span class="token-comment">// 2. An Agent resource is updated</span>
+<span class="token-comment">// 3. An Agent resource is deleted</span>
+<span class="token-comment">// 4. A owned resource (Deployment, Pod) changes</span>
+<span class="token-comment">// 5. The controller restarts (full resync)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Parameters:</span>
+<span class="token-comment">// - ctx: context for cancellation and deadlines</span>
+<span class="token-comment">// - req: contains the Name and Namespace of the changed Agent</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Returns:</span>
+<span class="token-comment">// - Result: whether to requeue and when</span>
+<span class="token-comment">// - error: if reconciliation failed (causes automatic requeue)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: The reconcile loop should be idempotent.</span>
+<span class="token-comment">// This means calling Reconcile multiple times with the same</span>
+<span class="token-comment">// Agent produces the same result. Kubernetes may deliver the</span>
+<span class="token-comment">// same event multiple times, and the controller may restart</span>
+<span class="token-comment">// and re-process old events. Idempotency prevents duplicate work.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) <span class="token-function">Reconcile</span>(ctx context.Context, req ctrl.Request) (ctrl.Result, <span class="token-type">error</span>) {
+	<span class="token-comment">// Get a logger scoped to this reconciliation</span>
+	<span class="token-comment">// The logger automatically includes the Agent name and namespace</span>
+	logger := log.<span class="token-function">FromContext</span>(ctx)
+
+	<span class="token-comment">// Step 1: Fetch the Agent resource</span>
+	<span class="token-comment">// COMMON MISTAKE: Not checking if the Agent still exists.</span>
+	<span class="token-comment">// The Agent may have been deleted between the event and this</span>
+	<span class="token-comment">// reconciliation. Always check for NotFound errors.</span>
+	agent := &amp;configv1.Agent{}
+	<span class="token-keyword">if</span> err := r.<span class="token-function">Get</span>(ctx, req.NamespacedName, agent); err != <span class="token-keyword">nil</span> {
+		<span class="token-keyword">if</span> errors.<span class="token-function">IsNotFound</span>(err) {
+			<span class="token-comment">// Agent was deleted — nothing to reconcile</span>
+			<span class="token-comment">// The finalizer handler will clean up owned resources</span>
+			logger.<span class="token-function">Info</span>(<span class="token-string">"Agent not found, may have been deleted"</span>)
+			<span class="token-keyword">return</span> ctrl.Result{}, <span class="token-keyword">nil</span>
+		}
+		<span class="token-comment">// Unexpected error — requeue with backoff</span>
+		<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to get Agent: %w"</span>, err)
+	}
+
+	<span class="token-comment">// Step 2: Handle deletion with finalizers</span>
+	<span class="token-comment">// DEEP DIVE: Why finalizers?</span>
+	<span class="token-comment">// When you delete a Kubernetes resource, it's marked for deletion</span>
+	<span class="token-comment">// but not actually removed until all finalizers are cleared.</span>
+	<span class="token-comment">// This gives the controller a chance to clean up owned resources</span>
+	<span class="token-comment">// (Deployments, Services, etc.) before the Agent is gone.</span>
+	<span class="token-comment">// Without finalizers, deleting an Agent would orphan its Deployment.</span>
+	<span class="token-keyword">if</span> !agent.ObjectMeta.DeletionTimestamp.<span class="token-function">IsZero</span>() {
+		<span class="token-keyword">return</span> r.handleDeletion(ctx, agent)
+	}
+
+	<span class="token-comment">// Step 3: Add finalizer if not present</span>
+	<span class="token-comment">// COMMON MISTAKE: Adding the finalizer AFTER creating resources.</span>
+	<span class="token-comment">// If the controller crashes between creating resources and adding</span>
+	<span class="token-comment">// the finalizer, the Agent can be deleted without cleanup.</span>
+	<span class="token-comment">// Always add the finalizer FIRST.</span>
+	<span class="token-keyword">if</span> !controllerutil.<span class="token-function">ContainsFinalizer</span>(agent, agentFinalizer) {
+		controllerutil.<span class="token-function">AddFinalizer</span>(agent, agentFinalizer)
+		<span class="token-keyword">if</span> err := r.<span class="token-function">Update</span>(ctx, agent); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to add finalizer: %w"</span>, err)
+		}
+	}
+
+	<span class="token-comment">// Step 4: Reconcile the desired state</span>
+	result, err := r.reconcileAgent(ctx, agent)
+	<span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+		<span class="token-comment">// Update Status to reflect the error</span>
+		<span class="token-comment">// DEEP DIVE: Always update Status on error.</span>
+		<span class="token-comment">// If you don't, the Status shows "Running" when the agent</span>
+		<span class="token-comment">// is actually failing. Users see stale Status and don't</span>
+		<span class="token-comment">// know there's a problem.</span>
+		r.updateStatus(ctx, agent, <span class="token-string">"Failed"</span>, err.<span class="token-function">Error</span>())
+		<span class="token-keyword">return</span> ctrl.Result{RequeueAfter: <span class="token-number">30</span> * time.Second}, <span class="token-keyword">nil</span>
+	}
+
+	<span class="token-comment">// Step 5: Update Status to reflect success</span>
+	r.updateStatus(ctx, agent, <span class="token-string">"Running"</span>, <span class="token-string">"Reconciliation successful"</span>)
+
+	<span class="token-keyword">return</span> result, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// reconcileAgent performs the actual reconciliation work.</span>
+<span class="token-comment">// It ensures the Agent's Deployment exists and matches the desired state.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) reconcileAgent(ctx context.Context, agent *configv1.Agent) (ctrl.Result, <span class="token-type">error</span>) {
+	logger := log.<span class="token-function">FromContext</span>(ctx)
+
+	<span class="token-comment">// If the agent is disabled, ensure the Deployment is deleted</span>
+	<span class="token-keyword">if</span> !agent.Spec.Enabled {
+		logger.<span class="token-function">Info</span>(<span class="token-string">"Agent is disabled, ensuring Deployment is removed"</span>)
+		<span class="token-keyword">return</span> r.deleteDeployment(ctx, agent)
+	}
+
+	<span class="token-comment">// Fetch or create the Deployment</span>
+	deployment := &amp;appsv1.Deployment{}
+	err := r.<span class="token-function">Get</span>(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+
+	<span class="token-keyword">if</span> errors.<span class="token-function">IsNotFound</span>(err) {
+		<span class="token-comment">// Deployment doesn't exist — create it</span>
+		logger.<span class="token-function">Info</span>(<span class="token-string">"Creating Deployment for Agent"</span>, <span class="token-string">"agent"</span>, agent.Name)
+		deployment = r.buildDeployment(agent)
+		<span class="token-keyword">if</span> err := ctrl.<span class="token-function">SetControllerReference</span>(agent, deployment, r.Scheme); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to set owner reference: %w"</span>, err)
+		}
+		<span class="token-keyword">if</span> err := r.<span class="token-function">Create</span>(ctx, deployment); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to create Deployment: %w"</span>, err)
+		}
+		<span class="token-comment">// Requeue to check if the Deployment becomes ready</span>
+		<span class="token-keyword">return</span> ctrl.Result{RequeueAfter: <span class="token-number">10</span> * time.Second}, <span class="token-keyword">nil</span>
+	} <span class="token-keyword">else</span> <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+		<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to get Deployment: %w"</span>, err)
+	}
+
+	<span class="token-comment">// Deployment exists — check if it needs updating</span>
+	<span class="token-comment">// COMMON MISTAKE: Not checking if the Deployment spec matches.</span>
+	<span class="token-comment">// If you always create the Deployment, you'll get a conflict error.</span>
+	<span class="token-comment">// If you never update it, changes to the Agent spec are ignored.</span>
+	<span class="token-comment">// Always compare the current Deployment spec with the desired spec.</span>
+	<span class="token-keyword">if</span> r.needsUpdate(deployment, agent) {
+		logger.<span class="token-function">Info</span>(<span class="token-string">"Updating Deployment for Agent"</span>, <span class="token-string">"agent"</span>, agent.Name)
+		updated := r.buildDeployment(agent)
+		deployment.Spec = updated.Spec
+		<span class="token-keyword">if</span> err := r.<span class="token-function">Update</span>(ctx, deployment); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to update Deployment: %w"</span>, err)}
+		<span class="token-keyword">return</span> ctrl.Result{RequeueAfter: <span class="token-number">10</span> * time.Second}, <span class="token-keyword">nil</span>
+	}
+
+	<span class="token-comment">// Check if the Deployment is ready</span>
+	<span class="token-keyword">if</span> deployment.Status.ReadyReplicas == *agent.Spec.Replicas {
+		logger.<span class="token-function">Info</span>(<span class="token-string">"Agent is ready"</span>, <span class="token-string">"agent"</span>, agent.Name)
+		<span class="token-keyword">return</span> ctrl.Result{}, <span class="token-keyword">nil</span>
+	}
+
+	<span class="token-comment">// Deployment is not ready yet — requeue to check later</span>
+	logger.<span class="token-function">Info</span>(<span class="token-string">"Deployment not ready, requeuing"</span>, <span class="token-string">"agent"</span>, agent.Name,
+		<span class="token-string">"ready"</span>, deployment.Status.ReadyReplicas,
+		<span class="token-string">"desired"</span>, *agent.Spec.Replicas)
+	<span class="token-keyword">return</span> ctrl.Result{RequeueAfter: <span class="token-number">10</span> * time.Second}, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// buildDeployment creates a Deployment spec from the Agent spec.</span>
+<span class="token-comment">// This is where the desired state is translated into Kubernetes resources.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why build a Deployment instead of a Pod directly?</span>
+<span class="token-comment">// Deployments provide:</span>
+<span class="token-comment">// - Automatic restart on failure</span>
+- Rolling updates <span class="token-keyword">for</span> zero-downtime deployments
+<span class="token-comment">// - Replica management</span>
+<span class="token-comment">// - Version history and rollback</span>
+<span class="token-comment">// Pods are ephemeral — Deployments are the production choice.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) buildDeployment(agent *configv1.Agent) *appsv1.Deployment {
+	<span class="token-comment">// Set default replicas if not specified</span>
+	replicas := <span class="token-type">int32</span>(<span class="token-number">1</span>)
+	<span class="token-keyword">if</span> agent.Spec.Replicas != <span class="token-keyword">nil</span> {
+		replicas = *agent.Spec.Replicas
+	}
+
+	<span class="token-comment">// Build resource requirements</span>
+	resources := corev1.ResourceRequirements{}
+	<span class="token-keyword">if</span> agent.Spec.Resources.CPURequest != <span class="token-string">""</span> || agent.Spec.Resources.MemoryRequest != <span class="token-string">""</span> {
+		resources.Requests = corev1.ResourceList{}
+		<span class="token-keyword">if</span> agent.Spec.Resources.CPURequest != <span class="token-string">""</span> {
+			resources.Requests[corev1.ResourceCPU] = resource.<span class="token-function">MustParse</span>(agent.Spec.Resources.CPURequest)
+		}
+		<span class="token-keyword">if</span> agent.Spec.Resources.MemoryRequest != <span class="token-string">""</span> {
+			resources.Requests[corev1.ResourceMemory] = resource.<span class="token-function">MustParse</span>(agent.Spec.Resources.MemoryRequest)
+		}
+	}
+	<span class="token-keyword">if</span> agent.Spec.Resources.CPULimit != <span class="token-string">""</span> || agent.Spec.Resources.MemoryLimit != <span class="token-string">""</span> {
+		resources.Limits = corev1.ResourceList{}
+		<span class="token-keyword">if</span> agent.Spec.Resources.CPULimit != <span class="token-string">""</span> {
+			resources.Limits[corev1.ResourceCPU] = resource.<span class="token-function">MustParse</span>(agent.Spec.Resources.CPULimit)
+		}
+		<span class="token-keyword">if</span> agent.Spec.Resources.MemoryLimit != <span class="token-string">""</span> {
+			resources.Limits[corev1.ResourceMemory] = resource.<span class="token-function">MustParse</span>(agent.Spec.Resources.MemoryLimit)
+		}
+	}
+
+	<span class="token-keyword">return</span> &amp;appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+			Labels: <span class="token-keyword">map</span>[<span class="token-type">string</span>]<span class="token-type">string</span>{
+				<span class="token-string">"app.kubernetes.io/name"</span>:       <span class="token-string">"agent"</span>,
+				<span class="token-string">"app.kubernetes.io/instance"</span>:   agent.Name,
+				<span class="token-string">"app.kubernetes.io/managed-by"</span>: <span class="token-string">"agent-operator"</span>,
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &amp;replicas,
+			Selector: &amp;metav1.LabelSelector{
+				MatchLabels: <span class="token-keyword">map</span>[<span class="token-type">string</span>]<span class="token-type">string</span>{
+					<span class="token-string">"app.kubernetes.io/name"</span>:     <span class="token-string">"agent"</span>,
+					<span class="token-string">"app.kubernetes.io/instance"</span>: agent.Name,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: <span class="token-keyword">map</span>[<span class="token-type">string</span>]<span class="token-type">string</span>{
+						<span class="token-string">"app.kubernetes.io/name"</span>:     <span class="token-string">"agent"</span>,
+						<span class="token-string">"app.kubernetes.io/instance"</span>: agent.Name,
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:      <span class="token-string">"agent"</span>,
+							Image:     agent.Spec.Image,
+							Resources: resources,
+							Env: []corev1.EnvVar{
+								{
+									Name:  <span class="token-string">"AGENT_MODEL"</span>,
+									Value: agent.Spec.Model,
+								},
+								{
+									Name:  <span class="token-string">"AGENT_NAME"</span>,
+									Value: agent.Name,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+<span class="token-comment">// needsUpdate checks if the Deployment needs to be updated.</span>
+<span class="token-comment">// Returns true if the Deployment spec doesn't match the Agent spec.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Comparing entire Deployment objects.</span>
+<span class="token-comment">// This is fragile — Kubernetes adds fields like ResourceVersion</span>
+<span class="token-comment">// and UID that change on every update. Compare only the fields</span>
+<span class="token-comment">// you care about (image, replicas, resources).</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) needsUpdate(deployment *appsv1.Deployment, agent *configv1.Agent) <span class="token-type">bool</span> {
+	<span class="token-comment">// Check if replicas match</span>
+	<span class="token-keyword">if</span> deployment.Spec.Replicas == <span class="token-keyword">nil</span> || *deployment.Spec.Replicas != *agent.Spec.Replicas {
+		<span class="token-keyword">return</span> <span class="token-keyword">true</span>
+	}
+
+	<span class="token-comment">// Check if image matches</span>
+	<span class="token-keyword">if</span> <span class="token-keyword">len</span>(deployment.Spec.Template.Spec.Containers) == <span class="token-number">0</span> {
+		<span class="token-keyword">return</span> <span class="token-keyword">true</span>
+	}
+	<span class="token-keyword">if</span> deployment.Spec.Template.Spec.Containers[<span class="token-number">0</span>].Image != agent.Spec.Image {
+		<span class="token-keyword">return</span> <span class="token-keyword">true</span>
+	}
+
+	<span class="token-comment">// Check if model env var matches</span>
+	<span class="token-keyword">for</span> _, env := <span class="token-keyword">range</span> deployment.Spec.Template.Spec.Containers[<span class="token-number">0</span>].Env {
+		<span class="token-keyword">if</span> env.Name == <span class="token-string">"AGENT_MODEL"</span> &amp;&amp; env.Value != agent.Spec.Model {
+			<span class="token-keyword">return</span> <span class="token-keyword">true</span>
+		}
+	}
+
+	<span class="token-keyword">return</span> <span class="token-keyword">false</span>
+}
+
+<span class="token-comment">// deleteDeployment removes the Deployment owned by this Agent.</span>
+<span class="token-comment">// Returns a Result that doesn't requeue (the Agent is being deleted).</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) deleteDeployment(ctx context.Context, agent *configv1.Agent) (ctrl.Result, <span class="token-type">error</span>) {
+	deployment := &amp;appsv1.Deployment{}
+	err := r.<span class="token-function">Get</span>(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+
+	<span class="token-keyword">if</span> errors.<span class="token-function">IsNotFound</span>(err) {
+		<span class="token-comment">// Deployment already deleted — nothing to do</span>
+		<span class="token-keyword">return</span> ctrl.Result{}, <span class="token-keyword">nil</span>
+	} <span class="token-keyword">else</span> <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+		<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to get Deployment for deletion: %w"</span>, err)
+	}
+
+	<span class="token-keyword">if</span> err := r.<span class="token-function">Delete</span>(ctx, deployment); err != <span class="token-keyword">nil</span> {
+		<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to delete Deployment: %w"</span>, err)
+	}
+
+	<span class="token-keyword">return</span> ctrl.Result{}, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// handleDeletion cleans up owned resources when an Agent is deleted.</span>
+<span class="token-comment">// This is called when the Agent has a deletion timestamp.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) handleDeletion(ctx context.Context, agent *configv1.Agent) (ctrl.Result, <span class="token-type">error</span>) {
+	logger := log.<span class="token-function">FromContext</span>(ctx)
+
+	<span class="token-comment">// Check if the finalizer is present</span>
+	<span class="token-keyword">if</span> controllerutil.<span class="token-function">ContainsFinalizer</span>(agent, agentFinalizer) {
+		<span class="token-comment">// Clean up owned resources</span>
+		<span class="token-keyword">if</span> err := r.deleteDeployment(ctx, agent); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to delete Deployment during deletion: %w"</span>, err)
+		}
+
+		<span class="token-comment">// Remove the finalizer to allow deletion to proceed</span>
+		<span class="token-comment">// COMMON MISTAKE: Forgetting to remove the finalizer.</span>
+		<span class="token-comment">// Without removing it, the Agent will be stuck in "Terminating"</span>
+		<span class="token-comment">// state forever. Kubernetes waits for all finalizers to be</span>
+		<span class="token-comment">// cleared before actually deleting the resource.</span>
+		controllerutil.<span class="token-function">RemoveFinalizer</span>(agent, agentFinalizer)
+		<span class="token-keyword">if</span> err := r.<span class="token-function">Update</span>(ctx, agent); err != <span class="token-keyword">nil</span> {
+			<span class="token-keyword">return</span> ctrl.Result{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to remove finalizer: %w"</span>, err)
+		}
+	}
+
+	logger.<span class="token-function">Info</span>(<span class="token-string">"Agent deletion handled successfully"</span>, <span class="token-string">"agent"</span>, agent.Name)
+	<span class="token-keyword">return</span> ctrl.Result{}, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// updateStatus updates the Agent's Status subresource.</span>
+<span class="token-comment">// This is called after every reconciliation to reflect the current state.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why use the Status subresource?</span>
+<span class="token-comment">// Kubernetes separates Spec (desired state) from Status (actual state).</span>
+<span class="token-comment">// Updating Status doesn't trigger another reconciliation (with the</span>
+<span class="token-comment">// /status subresource). This prevents infinite reconciliation loops.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) updateStatus(ctx context.Context, agent *configv1.Agent, phase <span class="token-type">string</span>, message <span class="token-type">string</span>) {
+	agent.Status.Phase = phase
+	agent.Status.Message = message
+	now := metav1.<span class="token-function">Now</span>()
+	agent.Status.LastReconciledAt = &amp;now
+
+	<span class="token-keyword">if</span> err := r.<span class="token-function">Status</span>().<span class="token-function">Update</span>(ctx, agent); err != <span class="token-keyword">nil</span> {
+		log.<span class="token-function">FromContext</span>(ctx).<span class="token-function">Error</span>(err, <span class="token-string">"failed to update Agent status"</span>)
+	}
+}
+
+<span class="token-comment">// SetupWithManager registers the controller with the manager.</span>
+<span class="token-comment">// This is called from main.go to wire up the controller.</span>
+<span class="token-keyword">func</span> (r *AgentReconciler) <span class="token-function">SetupWithManager</span>(mgr ctrl.Manager) <span class="token-type">error</span> {
+	<span class="token-keyword">return</span> ctrl.<span class="token-function">NewControllerManagedBy</span>(mgr).
+		<span class="token-function">For</span>(&amp;configv1.Agent{}).
+		<span class="token-function">Owns</span>(&amp;appsv1.Deployment{}).
+		<span class="token-function">Complete</span>(r)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="part-3-the-manager" class="section-title fade-in">Part 3: The Manager</h2>
+
+<h3 id="what-is-the-manager" class="content-subtitle fade-in">What Is the Manager?</h3>
+
+<p class="fade-in">The Manager is the entry point for controller-runtime. It:</p>
+<ol class="fade-in">
+  <li>Starts all controllers</li>
+  <li>Runs the webhook server (if configured)</li>
+  <li>Manages the informer cache (watches resources)</li>
+  <li>Handles graceful shutdown</li>
+  <li>Coordinates leader election</li>
+</ol>
+
+<p class="fade-in">Think of the Manager as the conductor of an orchestra. It doesn't play any instrument, but it coordinates all the musicians (controllers) and ensures they play in harmony.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">cmd/main.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// cmd/main.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// The entry point for the operator.</span>
+<span class="token-comment">// This file is minimal — it just sets up the Manager and starts it.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why is main.go so short?</span>
+<span class="token-comment">// Because all the logic lives in the controller and config packages.</span>
+<span class="token-comment">// main.go only handles:</span>
+<span class="token-comment">// 1. Parsing command-line flags</span>
+<span class="token-comment">// 2. Setting up the Manager</span>
+<span class="token-comment">// 3. Registering controllers</span>
+<span class="token-comment">// 4. Starting the Manager</span>
+<span class="token-comment">// This separation makes the operator testable — you can test</span>
+<span class="token-comment">// the controller without running the full Manager.</span>
+
+<span class="token-keyword">package</span> main
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"flag"</span>
+	<span class="token-string">"os"</span>
+
+	<span class="token-string">"k8s.io/apimachinery/pkg/runtime"</span>
+	utilruntime <span class="token-string">"k8s.io/apimachinery/pkg/util/runtime"</span>
+	clientgoscheme <span class="token-string">"k8s.io/client-go/kubernetes/scheme"</span>
+	_ <span class="token-string">"k8s.io/client-go/plugin/pkg/client/auth"</span>
+	ctrl <span class="token-string">"sigs.k8s.io/controller-runtime"</span>
+	<span class="token-string">"sigs.k8s.io/controller-runtime/pkg/healthz"</span>
+	<span class="token-string">"sigs.k8s.io/controller-runtime/pkg/log/zap"</span>
+	metricsserver <span class="token-string">"sigs.k8s.io/controller-runtime/pkg/metrics/server"</span>
+
+	configv1 <span class="token-string">"github.com/myorg/my-operator/internal/config"</span>
+	<span class="token-string">"github.com/myorg/my-operator/internal/controller"</span>
+)
+
+<span class="token-keyword">var</span> (
+	scheme   = runtime.<span class="token-function">NewScheme</span>()
+	setupLog = ctrl.Log.<span class="token-function">WithName</span>(<span class="token-string">"setup"</span>)
+)
+
+<span class="token-keyword">func</span> init() {
+	<span class="token-comment">// Register all the types the operator needs to work with</span>
+	<span class="token-comment">// DEEP DIVE: The scheme is a registry of all known types.</span>
+	<span class="token-comment">// When the API server returns a resource, the scheme knows</span>
+	<span class="token-comment">// how to deserialize it into the correct Go struct.</span>
+	<span class="token-comment">// clientgoscheme adds all built-in Kubernetes types (Pods, Deployments, etc.)</span>
+	<span class="token-comment">// configv1 adds our custom Agent type.</span>
+	utilruntime.<span class="token-function">Must</span>(clientgoscheme.<span class="token-function">AddToScheme</span>(scheme))
+	utilruntime.<span class="token-function">Must</span>(configv1.<span class="token-function">AddToScheme</span>(scheme))
+}
+
+<span class="token-keyword">func</span> main() {
+	<span class="token-comment">// Parse command-line flags</span>
+	<span class="token-keyword">var</span> metricsAddr <span class="token-type">string</span>
+	<span class="token-keyword">var</span> enableLeaderElection <span class="token-type">bool</span>
+	<span class="token-keyword">var</span> probeAddr <span class="token-type">string</span>
+
+	flag.<span class="token-function">StringVar</span>(&amp;metricsAddr, <span class="token-string">"metrics-bind-address"</span>, <span class="token-string">":8080"</span>, <span class="token-string">"The address the metric endpoint binds to."</span>)
+	flag.<span class="token-function">StringVar</span>(&amp;probeAddr, <span class="token-string">"health-probe-bind-address"</span>, <span class="token-string">":8081"</span>, <span class="token-string">"The address the probe endpoint binds to."</span>)
+	flag.<span class="token-function">BoolVar</span>(&amp;enableLeaderElection, <span class="token-string">"leader-elect"</span>, <span class="token-keyword">false</span>,
+		<span class="token-string">"Enable leader election for controller manager."</span>)
+	flag.<span class="token-function">Parse</span>()
+
+	<span class="token-comment">// Set up the logger</span>
+	<span class="token-comment">// DEEP DIVE: Zap is the recommended logger for controller-runtime.</span>
+	<span class="token-comment">// It's fast, structured, and handles JSON output for production.</span>
+	<span class="token-comment">// For development, use the development flag for human-readable output.</span>
+	ctrl.<span class="token-function">SetLogger</span>(zap.<span class="token-function">New</span>(zap.<span class="token-function">UseDevMode</span>(<span class="token-keyword">true</span>)))
+
+	<span class="token-comment">// Create the Manager</span>
+	<span class="token-comment">// DEEP DIVE: The Manager configuration options:</span>
+	<span class="token-comment">// - Scheme: registry of all known types</span>
+	<span class="token-comment">// - MetricsBindAddress: where to expose Prometheus metrics</span>
+	<span class="token-comment">// - ProbeBindAddress: where to expose health/readiness probes</span>
+	<span class="token-comment">// - LeaderElection: ensure only one instance is active</span>
+	<span class="token-comment">// - LeaderElectionNamespace: where to store the leader lock</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// COMMON MISTAKE: Not enabling leader election in production.</span>
+	<span class="token-comment">// Without it, all operator instances try to reconcile simultaneously.</span>
+	<span class="token-comment">// This causes duplicate work and potential conflicts.</span>
+	<span class="token-comment">// Always enable leader election when running multiple replicas.</span>
+	mgr, err := ctrl.<span class="token-function">NewManager</span>(ctrl.<span class="token-function">GetConfigOrDie</span>(), ctrl.Options{
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       <span class="token-string">"agent-operator-lock"</span>,
+	})
+	<span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+		setupLog.<span class="token-function">Error</span>(err, <span class="token-string">"unable to start manager"</span>)
+		os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+	}
+
+	<span class="token-comment">// Set up the Agent controller</span>
+	<span class="token-comment">// DEEP DIVE: SetupWithManager registers the controller with the Manager.</span>
+	<span class="token-comment">// The Manager will:</span>
+	<span class="token-comment">// 1. Create an informer that watches Agent resources</span>
+	<span class="token-comment">// 2. Create an informer that watches Deployments (owned by Agents)</span>
+	<span class="token-comment">// 3. Start the reconcile loop when changes are detected</span>
+	<span class="token-comment">// 4. Handle graceful shutdown when the operator is stopped</span>
+	<span class="token-keyword">if</span> err = (&amp;controller.AgentReconciler{
+		Client: mgr.<span class="token-function">GetClient</span>(),
+		Scheme: mgr.<span class="token-function">GetScheme</span>(),
+	}).<span class="token-function">SetupWithManager</span>(mgr); err != <span class="token-keyword">nil</span> {
+		setupLog.<span class="token-function">Error</span>(err, <span class="token-string">"unable to create controller"</span>, <span class="token-string">"controller"</span>, <span class="token-string">"Agent"</span>)
+		os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+	}
+
+	<span class="token-comment">// Add health and readiness probes</span>
+	<span class="token-comment">// DEEP DIVE: Kubernetes uses probes to check if your operator is healthy.</span>
+	<span class="token-comment">// - Healthz: is the operator running?</span>
+	<span class="token-comment">// - Readyz: is the operator ready to serve requests?</span>
+	<span class="token-comment">// If the operator fails health checks, Kubernetes restarts it.</span>
+	<span class="token-keyword">if</span> err := mgr.<span class="token-function">AddHealthzRoute</span>(<span class="token-string">"healthz"</span>, healthz.Ping); err != <span class="token-keyword">nil</span> {
+		setupLog.<span class="token-function">Error</span>(err, <span class="token-string">"unable to set up health check"</span>)
+		os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+	}
+	<span class="token-keyword">if</span> err := mgr.<span class="token-function">AddReadyzRoute</span>(<span class="token-string">"readyz"</span>, healthz.Ping); err != <span class="token-keyword">nil</span> {
+		setupLog.<span class="token-function">Error</span>(err, <span class="token-string">"unable to set up ready check"</span>)
+		os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+	}
+
+	<span class="token-comment">// Start the Manager</span>
+	<span class="token-comment">// This blocks until the operator receives a shutdown signal (SIGTERM, SIGINT).</span>
+	<span class="token-comment">// The Manager handles graceful shutdown of all controllers.</span>
+	setupLog.<span class="token-function">Info</span>(<span class="token-string">"starting manager"</span>)
+	<span class="token-keyword">if</span> err := mgr.<span class="token-function">Start</span>(ctrl.<span class="token-function">SetupSignalHandler</span>()); err != <span class="token-keyword">nil</span> {
+		setupLog.<span class="token-function">Error</span>(err, <span class="token-string">"problem running manager"</span>)
+		os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+	}
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="part-4-informers--how-kubernetes-watches-work" class="section-title fade-in">Part 4: Informers — How Kubernetes Watches Work</h2>
+
+<h3 id="the-watch-mechanism" class="content-subtitle fade-in">The Watch Mechanism</h3>
+
+<p class="fade-in">Informers are how Kubernetes watches for resource changes. Instead of polling the API server (which would be slow and wasteful), informers maintain a local cache that's updated in real-time via watches.</p>
+
+<p class="fade-in">Think of it like a news subscription. Instead of checking the news website every minute (polling), you subscribe and get notifications when something new happens (watching).</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>API Server → Watch → Informer → Local Cache → Controller
+    ↑                                        ↓
+    └──────────── Reconcile ←──────────── Event</code></pre></div>
+</div>
+
+<h3 id="how-informers-work" class="content-subtitle fade-in">How Informers Work</h3>
+
+<ol class="fade-in">
+  <li><strong>List</strong>: On startup, the informer lists ALL resources of a type</li>
+  <li><strong>Watch</strong>: After listing, the informer opens a watch connection</li>
+  <li><strong>Cache</strong>: The informer maintains a local cache of all resources</li>
+  <li><strong>Event</strong>: When a resource changes, the informer fires an event</li>
+  <li><strong>Reconcile</strong>: The controller's reconcile function is called</li>
+</ol>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// DEEP DIVE: Informer lifecycle</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// 1. Manager starts the informer</span>
+<span class="token-comment">// 2. Informer does a full LIST of all Agent resources</span>
+<span class="token-comment">// 3. Informer opens a WATCH connection to the API server</span>
+<span class="token-comment">// 4. API server sends events (ADDED, MODIFIED, DELETED) as they happen</span>
+<span class="token-comment">// 5. Informer updates its local cache</span>
+<span class="token-comment">// 6. Informer fires the event handler (EnqueueRequestForObject)</span>
+<span class="token-comment">// 7. The event handler adds the changed object's key to the work queue</span>
+<span class="token-comment">// 8. The controller's Reconcile function is called with the key</span>
+<span class="token-comment">// 9. Reconcile fetches the object from the cache (not the API server)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Fetching from the API server instead of the cache.</span>
+<span class="token-comment">// The cache is up-to-date and much faster. The API server is a</span>
+<span class="token-comment">// bottleneck. Use r.Get() which reads from the cache, not direct</span>
+<span class="token-comment">// API calls which hit the server.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why is the cache important?</span>
+<span class="token-comment">// Without the cache, every reconciliation would need to call the</span>
+<span class="token-comment">// API server to get the current state. With thousands of resources,</span>
+<span class="token-comment">// this would overload the API server. The cache reduces API server</span>
+<span class="token-comment">// load by 99% or more.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="part-5-leader-election" class="section-title fade-in">Part 5: Leader Election</h2>
+
+<h3 id="why-leader-election" class="content-subtitle fade-in">Why Leader Election?</h3>
+
+<p class="fade-in">When you deploy an operator to Kubernetes, you might run multiple replicas for high availability. But you don't want all replicas reconciling simultaneously — that causes duplicate work and potential conflicts.</p>
+
+<p class="fade-in">Leader election ensures only ONE replica is active at a time. The others are standby — ready to take over if the leader dies.</p>
+
+<p class="fade-in">Think of it like a sports team. You have multiple players, but only one is the captain. The captain makes decisions. If the captain gets injured, another player becomes captain.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// DEEP DIVE: How leader election works</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// 1. The operator starts and tries to acquire a lock</span>
+<span class="token-comment">// 2. The lock is stored in a ConfigMap in the kube-system namespace</span>
+<span class="token-comment">// 3. The first operator to acquire the lock becomes the leader</span>
+<span class="token-comment">// 4. The leader starts all controllers</span>
+<span class="token-comment">// 5. Other operators wait and periodically try to acquire the lock</span>
+<span class="token-comment">// 6. If the leader dies (pod crash, node failure), the lock expires</span>
+<span class="token-comment">// 7. Another operator acquires the lock and becomes the new leader</span>
+<span class="token-comment">// 8. The new leader starts all controllers</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Not using leader election in production.</span>
+<span class="token-comment">// Without it, multiple operator instances reconcile simultaneously.</span>
+<span class="token-comment">// This causes:</span>
+<span class="token-comment">// - Duplicate work (wasted CPU)</span>
+<span class="token-comment">// - Race conditions (two operators modifying the same resource)</span>
+<span class="token-comment">// - Inconsistent state (different operators see different versions)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Lock duration vs check interval</span>
+<span class="token-comment">// - Lease duration: how long the lock is held (default: 15 seconds)</span>
+<span class="token-comment">// - Renew deadline: how often the leader renews the lock (default: 10 seconds)</span>
+<span class="token-comment">// - Retry period: how often standbys try to acquire the lock (default: 2 seconds)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// If the leader crashes, the lock expires after (Lease duration - Renew deadline).</span>
+<span class="token-comment">// With defaults, that's 5 seconds. During those 5 seconds, no reconciliation</span>
+<span class="token-comment">// happens. This is the trade-off: faster failover vs more frequent lock renewals.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="part-6-using-the-operator" class="section-title fade-in">Part 6: Using the Operator</h2>
+
+<h3 id="create-the-crd" class="content-subtitle fade-in">Create the CRD</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Generate the CRD YAML from the Go types</span>
+make generate
+make manifests
+
+<span class="token-comment"># Apply the CRD to your cluster</span>
+kubectl apply -f config/crd/agents.agnt.io.yaml</code></pre></div>
+</div>
+
+<h3 id="deploy-the-operator" class="content-subtitle fade-in">Deploy the Operator</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Build and push the operator image</span>
+make docker-build IMG=my-registry/agent-operator:v1
+make docker-push IMG=my-registry/agent-operator:v1
+
+<span class="token-comment"># Deploy to Kubernetes</span>
+make deploy IMG=my-registry/agent-operator:v1</code></pre></div>
+</div>
+
+<h3 id="create-an-agent-resource" class="content-subtitle fade-in">Create an Agent Resource</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># agent.yaml</span>
+<span class="token-keyword">apiVersion:</span> agnt.io/v1
+<span class="token-keyword">kind:</span> Agent
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> sensor-agent-1
+<span class="token-keyword">  namespace:</span> default
+<span class="token-keyword">spec:</span>
+<span class="token-keyword">  image:</span> my-registry/agent:latest
+<span class="token-keyword">  replicas:</span> 3
+<span class="token-keyword">  model:</span> gpt-4
+<span class="token-keyword">  enabled:</span> <span class="token-atom">true</span>
+<span class="token-keyword">  resources:</span>
+<span class="token-keyword">    cpuRequest:</span> <span class="token-string">"100m"</span>
+<span class="token-keyword">    memoryRequest:</span> <span class="token-string">"128Mi"</span>
+<span class="token-keyword">    cpuLimit:</span> <span class="token-string">"500m"</span>
+<span class="token-keyword">    memoryLimit:</span> <span class="token-string">"512Mi"</span></code></pre></div>
+</div>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Apply the Agent resource</span>
+kubectl apply -f agent.yaml
+
+<span class="token-comment"># Watch the Agent status</span>
+kubectl get agents -w
+
+<span class="token-comment"># Check the Deployment created by the operator</span>
+kubectl get deployments
+kubectl get pods -l app.kubernetes.io/name=agent</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong>controller-runtime</strong> is the CNCF standard. Every production K8s operator uses it. Learn it once, use it everywhere.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Reconciler</strong> is the core interface. It's called when something changes and must be idempotent. Always check for errors and update Status.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>CRDs</strong> extend the Kubernetes API. Use the Spec/Status pattern — Spec for desired state, Status for actual state.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Manager</strong> runs everything. It handles controllers, webhooks, caches, and leader election. main.go should be minimal.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Informers</strong> provide real-time watches with local caching. Don't poll the API server — use the cache.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Leader election</strong> ensures only one operator instance is active. Always enable it in production.</li>
+</ol>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">In Module 12, you'll learn how to instrument your Go services with Prometheus metrics. The RED metrics pattern (Rate, Errors, Duration) gives you observability into your operator's performance.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="10-clustering-distribution.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Clustering & Distribution</a>
+        <a href="12-go-prometheus.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Go Prometheus Exporters →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

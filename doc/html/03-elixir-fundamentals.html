@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elixir Fundamentals — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link active" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 3</div>
+        <h1 class="article-title">Elixir Fundamentals</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 3
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Pattern matching, pipe operator, immutability, Enum
+          </span>
+          <span class="article-meta-item lang-elixir" style="font-weight:600;color:var(--accent-purple)">
+            Elixir
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-3-elixir-fundamentals" class="article-title fade-in">Module 3: Elixir Fundamentals</h1>
+
+<div class="callout callout-info fade-in">
+  <span class="callout-icon">💡</span>
+  <div class="callout-title">What you'll learn</div>
+  <div class="callout-body">iex, pattern matching, the pipe operator, immutability, and data processing with Enum/Map. By the end of this module you'll build a data processing pipeline in Elixir.</div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="1-iex--the-interactive-shell" class="section-title fade-in">1. iex — The Interactive Shell</h2>
+
+<p class="fade-in">iex is Elixir's REPL (Read-Eval-Print Loop). Think of it as a calculator that speaks Elixir.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start iex</span>
+iex</code></pre></div>
+</div>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Basic arithmetic</span>
+iex&gt; <span class="token-number">2</span> + <span class="token-number">2</span>
+<span class="token-number">4</span>
+
+iex&gt; <span class="token-number">10</span> / <span class="token-number">3</span>
+<span class="token-number">3.3333333333333335</span>
+
+iex&gt; <span class="token-function">div</span>(<span class="token-number">10</span>, <span class="token-number">3</span>)    <span class="token-comment"># integer division</span>
+<span class="token-number">3</span>
+
+iex&gt; <span class="token-function">rem</span>(<span class="token-number">10</span>, <span class="token-number">3</span>)    <span class="token-comment"># remainder</span>
+<span class="token-number">1</span>
+
+<span class="token-comment"># String operations</span>
+iex&gt; <span class="token-string">"Hello"</span> &lt;&gt; <span class="token-string">", "</span> &lt;&gt; <span class="token-string">"World!"</span>
+<span class="token-string">"Hello, World!"</span>
+
+<span class="token-comment"># IO is the standard way to print</span>
+iex&gt; <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Hello, Elixir!"</span>)
+<span class="token-type">Hello</span>, <span class="token-type">Elixir</span>!
+<span class="token-atom">:ok</span>
+
+<span class="token-comment"># Inspect shows the raw representation (useful for debugging)</span>
+iex&gt; <span class="token-type">IO</span>.<span class="token-function">inspect</span>([<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>], label: <span class="token-string">"my list"</span>)
+my list: [<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="2-the--match-operator--not-assignment" class="section-title fade-in">2. The <code>=</code> Match Operator — NOT Assignment</h2>
+
+<p class="fade-in">This is the single most important concept in Elixir. The <code>=</code> operator is pattern matching, not assignment.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># In most languages, = means "assign the right side to the left"</span>
+<span class="token-comment"># In Elixir, = means "match the right side to the left pattern"</span>
+
+<span class="token-comment"># This WORKS — the pattern matches</span>
+iex&gt; {name, age} = {<span class="token-string">"Alice"</span>, <span class="token-number">30</span>}
+<span class="token-string">"Alice"</span>
+<span class="token-number">30</span>
+
+<span class="token-comment"># Now name and age are bound to their matched values</span>
+iex&gt; name
+<span class="token-string">"Alice"</span>
+
+iex&gt; age
+<span class="token-number">30</span>
+
+<span class="token-comment"># This FAILS — the pattern doesn't match</span>
+iex&gt; {name, age} = {<span class="token-string">"Alice"</span>}
+** (<span class="token-type">MatchError</span>) no match of right hand side value: {<span class="token-string">"Alice"</span>}
+<span class="token-comment"># COMMON MISTAKE: Expecting = to work like assignment.</span>
+<span class="token-comment"># It WILL crash if the pattern doesn't match. This is intentional.</span>
+<span class="token-comment"># It catches bugs at the point they occur, not later.</span>
+
+<span class="token-comment"># You can match specific values too</span>
+iex&gt; <span class="token-atom">:ok</span> = <span class="token-function">do_something</span>()
+<span class="token-comment"># If do_something() returns :ok, this works.</span>
+<span class="token-comment"># If it returns anything else, it crashes immediately.</span>
+<span class="token-comment"># This is called "assertive programming" — fail fast on unexpected values.</span>
+
+<span class="token-comment"># Pin operator (^) — match against an existing variable</span>
+iex&gt; x = <span class="token-number">10</span>
+<span class="token-number">10</span>
+iex&gt; ^x = <span class="token-number">10</span>   <span class="token-comment"># matches — x is 10, right side is 10</span>
+<span class="token-number">10</span>
+iex&gt; ^x = <span class="token-number">20</span>   <span class="token-comment"># DOES NOT MATCH — x is 10, right side is 20</span>
+** (<span class="token-type">MatchError</span>) no match of right hand side value: <span class="token-number">20</span></code></pre></div>
+</div>
+
+<h3 id="why-pattern-matching-matters" class="content-subtitle fade-in">Why pattern matching matters</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># DEEP DIVE: Pattern matching enables clean, safe code</span>
+<span class="token-comment"># Instead of checking types and values manually:</span>
+
+<span class="token-comment"># BAD (manual checking):</span>
+<span class="token-keyword">def</span> <span class="token-function">process</span>(data) <span class="token-keyword">do</span>
+  <span class="token-keyword">if</span> <span class="token-function">is_tuple</span>(data) <span class="token-keyword">do</span>
+    {type, value} = data
+    <span class="token-keyword">if</span> type == <span class="token-atom">:ok</span> <span class="token-keyword">do</span>
+      <span class="token-comment"># handle success</span>
+    <span class="token-keyword">else</span>
+      <span class="token-comment"># handle error</span>
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># GOOD (pattern matching):</span>
+<span class="token-keyword">def</span> <span class="token-function">process</span>({<span class="token-atom">:ok</span>, value}), <span class="token-keyword">do</span>: <span class="token-function">handle_success</span>(value)
+<span class="token-keyword">def</span> <span class="token-function">process</span>({<span class="token-atom">:error</span>, reason}), <span class="token-keyword">do</span>: <span class="token-function">handle_error</span>(reason)
+<span class="token-comment"># Each clause handles exactly one case. No if/else chains.</span>
+<span class="token-comment"># If neither pattern matches, Elixir raises a FunctionClauseError.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="3-atoms--named-constants" class="section-title fade-in">3. Atoms — Named Constants</h2>
+
+<p class="fade-in">Atoms are Elixir's version of enums or symbols. They're lightweight, immutable identifiers.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Atoms start with a colon</span>
+iex&gt; <span class="token-atom">:ok</span>
+<span class="token-atom">:ok</span>
+
+iex&gt; <span class="token-atom">:error</span>
+<span class="token-atom">:error</span>
+
+iex&gt; <span class="token-atom">:user_created</span>
+<span class="token-atom">:user_created</span>
+
+<span class="token-comment"># Atoms are compared by name, not value</span>
+iex&gt; <span class="token-atom">:apple</span> == <span class="token-atom">:apple</span>
+<span class="token-keyword">true</span>
+
+iex&gt; <span class="token-atom">:apple</span> == <span class="token-atom">:orange</span>
+<span class="token-keyword">false</span>
+
+<span class="token-comment"># Common pattern: atoms as tags in tuples</span>
+iex&gt; {<span class="token-atom">:ok</span>, <span class="token-string">"result"</span>}
+{<span class="token-atom">:ok</span>, <span class="token-string">"result"</span>}
+
+iex&gt; {<span class="token-atom">:error</span>, <span class="token-string">"something went wrong"</span>}
+{<span class="token-atom">:error</span>, <span class="token-string">"something went wrong"</span>}
+
+<span class="token-comment"># DEEP DIVE: Why atoms?</span>
+<span class="token-comment"># Atoms are memory-efficient identifiers. Instead of passing</span>
+<span class="token-comment"># strings like "ok" and "error" around (which allocate memory</span>
+<span class="token-comment"># for each character), atoms are single values that are</span>
+<span class="token-comment"># compared in constant time. They're perfect for tags.</span>
+
+<span class="token-comment"># Atom naming convention:</span>
+<span class="token-comment"># :snake_case — like variables</span>
+<span class="token-comment"># :CamelCase — for module-like identifiers</span>
+<span class="token-comment"># :! for dangerous operations, :? for predicates</span>
+iex&gt; <span class="token-type">String</span>.starts_with?(<span class="token-string">"hello"</span>, <span class="token-string">"he"</span>)
+<span class="token-keyword">true</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="4-data-structures" class="section-title fade-in">4. Data Structures</h2>
+
+<h3 id="lists--linked-lists" class="content-subtitle fade-in">Lists — linked lists</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Lists are linked lists — fast to prepend, slow to access by index</span>
+iex&gt; cities = [<span class="token-string">"Istanbul"</span>, <span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>]
+[<span class="token-string">"Istanbul"</span>, <span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>]
+
+<span class="token-comment"># Prepend is O(1) — just add to the head</span>
+iex&gt; [<span class="token-string">"Bursa"</span> | cities]
+[<span class="token-string">"Bursa"</span>, <span class="token-string">"Istanbul"</span>, <span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>]
+
+<span class="token-comment"># Access by index is O(n) — must traverse the list</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">at</span>(cities, <span class="token-number">1</span>)
+<span class="token-string">"Ankara"</span>
+
+<span class="token-comment"># COMMON MISTAKE: Using lists like arrays</span>
+<span class="token-comment"># Lists are NOT arrays. Don't do cities[0] — use Enum.at(cities, 0).</span>
+<span class="token-comment"># If you need random access, use a tuple or a MapSet.</span>
+
+<span class="token-comment"># Pattern matching on lists</span>
+iex&gt; [first | rest] = cities
+[<span class="token-string">"Istanbul"</span>, <span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>]
+iex&gt; first
+<span class="token-string">"Istanbul"</span>
+iex&gt; rest
+[<span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>]
+
+<span class="token-comment"># The head/tail pattern is fundamental to list processing</span>
+iex&gt; [head | tail] = [<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+iex&gt; head
+<span class="token-number">1</span>
+iex&gt; tail
+[<span class="token-number">2</span>, <span class="token-number">3</span>]
+
+<span class="token-comment"># Empty list pattern</span>
+iex&gt; [] = []
+[]
+iex&gt; [] = [<span class="token-number">1</span>]
+** (<span class="token-type">MatchError</span>) no match of right hand side value: [<span class="token-number">1</span>]</code></pre></div>
+</div>
+
+<h3 id="tuples--fixed-size-collections" class="content-subtitle fade-in">Tuples — fixed-size collections</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Tuples are fixed-size, contiguous in memory, fast to access</span>
+iex&gt; point = {<span class="token-number">10</span>, <span class="token-number">20</span>}
+{<span class="token-number">10</span>, <span class="token-number">20</span>}
+
+<span class="token-comment"># Access by index — O(1)</span>
+iex&gt; <span class="token-function">elem</span>(point, <span class="token-number">0</span>)
+<span class="token-number">10</span>
+
+iex&gt; <span class="token-function">elem</span>(point, <span class="token-number">1</span>)
+<span class="token-number">20</span>
+
+<span class="token-comment"># Pattern matching on tuples</span>
+iex&gt; {x, y} = {<span class="token-number">10</span>, <span class="token-number">20</span>}
+{<span class="token-number">10</span>, <span class="token-number">20</span>}
+iex&gt; x
+<span class="token-number">10</span>
+iex&gt; y
+<span class="token-number">20</span>
+
+<span class="token-comment"># COMMON MISTAKE: Tuples vs Lists</span>
+<span class="token-comment"># Use tuples when you know the size and types in advance</span>
+<span class="token-comment"># Use lists when the size varies</span>
+<span class="token-comment"># {name, age, email} — fixed structure, use tuple</span>
+<span class="token-comment"># [item1, item2, item3] — variable length, use list</span>
+
+<span class="token-comment"># Tagged tuples — the most important pattern in Elixir</span>
+iex&gt; {<span class="token-atom">:ok</span>, data} = {<span class="token-atom">:ok</span>, %{name: <span class="token-string">"Alice"</span>}}
+{<span class="token-atom">:ok</span>, %{name: <span class="token-string">"Alice"</span>}}
+
+iex&gt; {<span class="token-atom">:error</span>, reason} = {<span class="token-atom">:error</span>, <span class="token-string">"timeout"</span>}
+{<span class="token-atom">:error</span>, <span class="token-string">"timeout"</span>}</code></pre></div>
+</div>
+
+<h3 id="maps--key-value-stores" class="content-subtitle fade-in">Maps — key-value stores</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Maps are hash maps — fast lookup, flexible keys</span>
+iex&gt; user = %{name: <span class="token-string">"Alice"</span>, age: <span class="token-number">30</span>, city: <span class="token-string">"Istanbul"</span>}
+%{name: <span class="token-string">"Alice"</span>, age: <span class="token-number">30</span>, city: <span class="token-string">"Istanbul"</span>}
+
+<span class="token-comment"># Access with dot notation</span>
+iex&gt; user.name
+<span class="token-string">"Alice"</span>
+
+<span class="token-comment"># Access with bracket notation (required for string keys)</span>
+iex&gt; user[<span class="token-atom">:age</span>]
+<span class="token-number">30</span>
+
+<span class="token-comment"># Update a map — creates a NEW map (immutability!)</span>
+iex&gt; older_user = %{user | age: <span class="token-number">31</span>}
+%{name: <span class="token-string">"Alice"</span>, age: <span class="token-number">31</span>, city: <span class="token-string">"Istanbul"</span>}
+
+<span class="token-comment"># COMMON MISTAKE: Trying to mutate a map</span>
+<span class="token-comment"># user.age = 31  # THIS DOES NOT EXIST IN ELIXIR</span>
+<span class="token-comment"># You MUST create a new map with the updated value.</span>
+<span class="token-comment"># The old map remains unchanged.</span>
+
+<span class="token-comment"># Pattern matching on maps</span>
+iex&gt; %{name: name, age: age} = user
+%{name: <span class="token-string">"Alice"</span>, age: <span class="token-number">30</span>, city: <span class="token-string">"Istanbul"</span>}
+iex&gt; name
+<span class="token-string">"Alice"</span>
+iex&gt; age
+<span class="token-number">30</span>
+
+<span class="token-comment"># You can match partial patterns — only the keys you care about</span>
+iex&gt; %{name: name} = user  <span class="token-comment"># ignores age and city</span>
+%{name: <span class="token-string">"Alice"</span>, age: <span class="token-number">30</span>, city: <span class="token-string">"Istanbul"</span>}
+iex&gt; name
+<span class="token-string">"Alice"</span>
+
+<span class="token-comment"># Map with string keys</span>
+iex&gt; %{<span class="token-string">"status"</span> =&gt; <span class="token-string">"ok"</span>, <span class="token-string">"code"</span> =&gt; <span class="token-number">200</span>}
+%{<span class="token-string">"status"</span> =&gt; <span class="token-string">"ok"</span>, <span class="token-string">"code"</span> =&gt; <span class="token-number">200</span>}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="5-the-pipe-operator---data-flows-left-to-right" class="section-title fade-in">5. The Pipe Operator <code>|></code> — Data Flows Left to Right</h2>
+
+<p class="fade-in">The pipe operator takes the result of the left side and passes it as the first argument to the function on the right.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Without pipe — reads inside out, hard to follow</span>
+iex&gt; <span class="token-type">String</span>.<span class="token-function">downcase</span>(<span class="token-type">String</span>.<span class="token-function">strip</span>(<span class="token-type">String</span>.<span class="token-function">replace</span>(<span class="token-string">"  Hello, World!  "</span>, <span class="token-string">"World"</span>, <span class="token-string">"Elixir"</span>)))
+<span class="token-string">"hello, elixir!"</span>
+
+<span class="token-comment"># With pipe — reads top to bottom, like a data pipeline</span>
+iex&gt; <span class="token-string">"  Hello, World!  "</span>
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">replace</span>(<span class="token-string">"World"</span>, <span class="token-string">"Elixir"</span>)
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">strip</span>()
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">downcase</span>()
+<span class="token-string">"hello, elixir!"</span>
+
+<span class="token-comment"># DEEP DIVE: How pipe works</span>
+<span class="token-comment"># Each line passes its result as the FIRST argument to the next function.</span>
+<span class="token-comment"># "  Hello, World!  " |&gt; String.replace("World", "Elixir")</span>
+<span class="token-comment"># becomes: String.replace("  Hello, World!  ", "World", "Elixir")</span>
+
+<span class="token-comment"># The pipe makes data transformations readable</span>
+<span class="token-comment"># Think of it like a factory assembly line:</span>
+<span class="token-comment"># Raw material → step 1 → step 2 → step 3 → finished product</span>
+
+<span class="token-comment"># Real-world example: processing user input</span>
+iex&gt; <span class="token-string">"  Alice@Example.COM  "</span>
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">trim</span>()
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">downcase</span>()
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">String</span>.<span class="token-function">split</span>(<span class="token-string">"@"</span>)
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">List</span>.<span class="token-function">first</span>()
+<span class="token-string">"alice"</span>
+
+<span class="token-comment"># Pipe with anonymous functions</span>
+iex&gt; [<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>, <span class="token-number">4</span>, <span class="token-number">5</span>]
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">Enum</span>.<span class="token-function">map</span>(<span class="token-keyword">fn</span> x -&gt; x * <span class="token-number">2</span> <span class="token-keyword">end</span>)
+...&gt; <span class="token-operator">|&gt;</span> <span class="token-type">Enum</span>.<span class="token-function">filter</span>(<span class="token-keyword">fn</span> x -&gt; x &gt; <span class="token-number">4</span> <span class="token-keyword">end</span>)
+[<span class="token-number">6</span>, <span class="token-number">8</span>, <span class="token-number">10</span>]</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="6-enum--the-data-processing-toolkit" class="section-title fade-in">6. Enum — The Data Processing Toolkit</h2>
+
+<p class="fade-in">Enum is Elixir's collection processing module. It works with lists, ranges, and anything that implements the Enumerable protocol.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># map — transform each element</span>
+iex&gt; numbers = [<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>, <span class="token-number">4</span>, <span class="token-number">5</span>]
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>, <span class="token-number">4</span>, <span class="token-number">5</span>]
+
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">map</span>(numbers, <span class="token-keyword">fn</span> x -&gt; x * <span class="token-number">2</span> <span class="token-keyword">end</span>)
+[<span class="token-number">2</span>, <span class="token-number">4</span>, <span class="token-number">6</span>, <span class="token-number">8</span>, <span class="token-number">10</span>]
+
+<span class="token-comment"># Shorthand with capture operator &amp;</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">map</span>(numbers, &amp;(&amp;<span class="token-number">1</span> * <span class="token-number">2</span>))
+[<span class="token-number">2</span>, <span class="token-number">4</span>, <span class="token-number">6</span>, <span class="token-number">8</span>, <span class="token-number">10</span>]
+
+<span class="token-comment"># filter — keep elements that match</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">filter</span>(numbers, <span class="token-keyword">fn</span> x -&gt; <span class="token-function">rem</span>(x, <span class="token-number">2</span>) == <span class="token-number">0</span> <span class="token-keyword">end</span>)
+[<span class="token-number">2</span>, <span class="token-number">4</span>]
+
+<span class="token-comment"># reduce — accumulate a single result</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">reduce</span>(numbers, <span class="token-number">0</span>, <span class="token-keyword">fn</span> x, acc -&gt; x + acc <span class="token-keyword">end</span>)
+<span class="token-number">15</span>
+<span class="token-comment"># How it works:</span>
+<span class="token-comment"># acc=0, x=1 → acc=1</span>
+<span class="token-comment"># acc=1, x=2 → acc=3</span>
+<span class="token-comment"># acc=3, x=3 → acc=6</span>
+<span class="token-comment"># acc=6, x=4 → acc=10</span>
+<span class="token-comment"># acc=10, x=5 → acc=15</span>
+
+<span class="token-comment"># each — side effects (printing, logging)</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">each</span>(numbers, <span class="token-keyword">fn</span> x -&gt; <span class="token-type">IO</span>.<span class="token-function">puts</span>(x) <span class="token-keyword">end</span>)
+<span class="token-number">1</span>
+<span class="token-number">2</span>
+<span class="token-number">3</span>
+<span class="token-number">4</span>
+<span class="token-number">5</span>
+<span class="token-atom">:ok</span>
+
+<span class="token-comment"># find — first element that matches</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">find</span>(numbers, <span class="token-keyword">fn</span> x -&gt; x &gt; <span class="token-number">3</span> <span class="token-keyword">end</span>)
+<span class="token-number">4</span>
+
+<span class="token-comment"># any?/all? — boolean checks</span>
+iex&gt; <span class="token-type">Enum</span>.any?(numbers, <span class="token-keyword">fn</span> x -&gt; x &gt; <span class="token-number">3</span> <span class="token-keyword">end</span>)
+<span class="token-keyword">true</span>
+
+iex&gt; <span class="token-type">Enum</span>.all?(numbers, <span class="token-keyword">fn</span> x -&gt; x &gt; <span class="token-number">3</span> <span class="token-keyword">end</span>)
+<span class="token-keyword">false</span>
+
+<span class="token-comment"># count</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">count</span>(numbers)
+<span class="token-number">5</span>
+
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">count</span>(numbers, <span class="token-keyword">fn</span> x -&gt; x &gt; <span class="token-number">3</span> <span class="token-keyword">end</span>)
+<span class="token-number">2</span>
+
+<span class="token-comment"># sort</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">sort</span>([<span class="token-number">5</span>, <span class="token-number">3</span>, <span class="token-number">1</span>, <span class="token-number">4</span>, <span class="token-number">2</span>])
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>, <span class="token-number">4</span>, <span class="token-number">5</span>]
+
+<span class="token-comment"># Chunk_every — group elements</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">chunk_every</span>([<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>, <span class="token-number">4</span>, <span class="token-number">5</span>, <span class="token-number">6</span>], <span class="token-number">2</span>)
+[[<span class="token-number">1</span>, <span class="token-number">2</span>], [<span class="token-number">3</span>, <span class="token-number">4</span>], [<span class="token-number">5</span>, <span class="token-number">6</span>]]
+
+<span class="token-comment"># zip — combine two lists</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">zip</span>([<span class="token-string">"Alice"</span>, <span class="token-string">"Bob"</span>], [<span class="token-number">30</span>, <span class="token-number">25</span>])
+[{<span class="token-string">"Alice"</span>, <span class="token-number">30</span>}, {<span class="token-string">"Bob"</span>, <span class="token-number">25</span>}]
+
+<span class="token-comment"># Into — collect into a different structure</span>
+iex&gt; <span class="token-type">Enum</span>.<span class="token-function">into</span>([<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>], %{})
+%{<span class="token-number">1</span> =&gt; <span class="token-keyword">true</span>, <span class="token-number">2</span> =&gt; <span class="token-keyword">true</span>, <span class="token-number">3</span> =&gt; <span class="token-keyword">true</span>}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="7-immutability--nothing-changes" class="section-title fade-in">7. Immutability — Nothing Changes</h2>
+
+<p class="fade-in">In Elixir, data is immutable. When you "modify" something, you create a new value. The old value remains unchanged.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># This is NOT mutation</span>
+iex&gt; list = [<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+
+iex&gt; new_list = [<span class="token-number">0</span> | list]
+[<span class="token-number">0</span>, <span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+
+<span class="token-comment"># list is STILL [1, 2, 3] — we didn't change it</span>
+iex&gt; list
+[<span class="token-number">1</span>, <span class="token-number">2</span>, <span class="token-number">3</span>]
+
+<span class="token-comment"># Why immutability matters:</span>
+<span class="token-comment"># 1. No race conditions — two processes can read the same data safely</span>
+<span class="token-comment"># 2. Predictable — a function can't surprise you by changing data</span>
+<span class="token-comment"># 3. Debugging — you can trace exactly when each value was created</span>
+<span class="token-comment"># 4. Concurrency — Elixir runs millions of processes safely because of this</span>
+
+<span class="token-comment"># DEEP DIVE: How immutability enables the BEAM VM</span>
+<span class="token-comment"># The BEAM (Erlang's VM) can run millions of lightweight processes.</span>
+<span class="token-comment"># Each process has its own memory. Because data is immutable,</span>
+<span class="token-comment"># processes can safely share data without locks or mutexes.</span>
+<span class="token-comment"># This is why Elixir handles concurrency so well.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="8-putting-it-together--data-processing-pipeline" class="section-title fade-in">8. Putting It Together — Data Processing Pipeline</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">WeatherPipeline</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  Processes raw weather data through a series of transformations.
+  Demonstrates pattern matching, pipe operator, and Enum operations.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-comment"># Raw weather data — imagine this comes from multiple APIs</span>
+  <span class="token-keyword">def</span> raw_data <span class="token-keyword">do</span>
+    [
+      %{city: <span class="token-string">"Istanbul"</span>, temp: <span class="token-number">28.5</span>, humidity: <span class="token-number">65</span>, conditions: <span class="token-string">"partly cloudy"</span>},
+      %{city: <span class="token-string">"Ankara"</span>, temp: <span class="token-number">31.0</span>, humidity: <span class="token-number">45</span>, conditions: <span class="token-string">"sunny"</span>},
+      %{city: <span class="token-string">"Izmir"</span>, temp: <span class="token-number">33.2</span>, humidity: <span class="token-number">55</span>, conditions: <span class="token-string">"clear"</span>},
+      %{city: <span class="token-string">"Bursa"</span>, temp: <span class="token-keyword">nil</span>, humidity: <span class="token-keyword">nil</span>, conditions: <span class="token-keyword">nil</span>},
+      %{city: <span class="token-string">"Antalya"</span>, temp: <span class="token-number">35.0</span>, humidity: <span class="token-number">70</span>, conditions: <span class="token-string">"hot"</span>},
+    ]
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Step 1: Filter out entries with missing data</span>
+  <span class="token-comment"># Uses pattern matching in the filter function</span>
+  <span class="token-keyword">def</span> <span class="token-function">filter_valid</span>(data) <span class="token-keyword">do</span>
+    <span class="token-type">Enum</span>.<span class="token-function">filter</span>(data, <span class="token-keyword">fn</span> entry -&gt;
+      entry.temp != <span class="token-keyword">nil</span> <span class="token-keyword">and</span> entry.humidity != <span class="token-keyword">nil</span> <span class="token-keyword">and</span> entry.conditions != <span class="token-keyword">nil</span>
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Step 2: Add heat index calculation</span>
+  <span class="token-comment"># Uses pattern matching to extract values</span>
+  <span class="token-keyword">def</span> <span class="token-function">add_heat_index</span>(data) <span class="token-keyword">do</span>
+    <span class="token-type">Enum</span>.<span class="token-function">map</span>(data, <span class="token-keyword">fn</span> %{temp: temp, humidity: hum} = entry -&gt;
+      <span class="token-comment"># Simplified heat index formula</span>
+      heat_index = temp + (hum * <span class="token-number">0.05</span>)
+      %{entry | heat_index: heat_index}
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Step 3: Classify by temperature range</span>
+  <span class="token-comment"># Uses pattern matching on the classified map</span>
+  <span class="token-keyword">def</span> <span class="token-function">classify_by_temp</span>(data) <span class="token-keyword">do</span>
+    <span class="token-type">Enum</span>.<span class="token-function">map</span>(data, <span class="token-keyword">fn</span> entry -&gt;
+      category = <span class="token-keyword">cond</span> <span class="token-keyword">do</span>
+        entry.temp &lt; <span class="token-number">20</span> -&gt; <span class="token-atom">:cold</span>
+        entry.temp &lt; <span class="token-number">30</span> -&gt; <span class="token-atom">:mild</span>
+        entry.temp &lt; <span class="token-number">35</span> -&gt; <span class="token-atom">:warm</span>
+        <span class="token-keyword">true</span> -&gt; <span class="token-atom">:hot</span>
+      <span class="token-keyword">end</span>
+      <span class="token-type">Map</span>.<span class="token-function">put</span>(entry, <span class="token-atom">:category</span>, category)
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Step 4: Group by category</span>
+  <span class="token-keyword">def</span> <span class="token-function">group_by_category</span>(data) <span class="token-keyword">do</span>
+    <span class="token-type">Enum</span>.<span class="token-function">group_by</span>(data, &amp; &amp;<span class="token-number">1.</span>category)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Step 5: Generate summary for each group</span>
+  <span class="token-keyword">def</span> <span class="token-function">summarize_groups</span>(groups) <span class="token-keyword">do</span>
+    <span class="token-type">Enum</span>.<span class="token-function">map</span>(groups, <span class="token-keyword">fn</span> {category, entries} -&gt;
+      temps = <span class="token-type">Enum</span>.<span class="token-function">map</span>(entries, &amp; &amp;<span class="token-number">1.</span>temp)
+      %{
+        category: category,
+        count: <span class="token-function">length</span>(entries),
+        avg_temp: <span class="token-type">Enum</span>.<span class="token-function">sum</span>(temps) / <span class="token-function">length</span>(temps),
+        cities: <span class="token-type">Enum</span>.<span class="token-function">map</span>(entries, &amp; &amp;<span class="token-number">1.</span>city)
+      }
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># The full pipeline — reads like a recipe</span>
+  <span class="token-keyword">def</span> process <span class="token-keyword">do</span>
+    <span class="token-function">raw_data</span>()
+    <span class="token-operator">|&gt;</span> <span class="token-function">filter_valid</span>()
+    <span class="token-operator">|&gt;</span> <span class="token-function">add_heat_index</span>()
+    <span class="token-operator">|&gt;</span> <span class="token-function">classify_by_temp</span>()
+    <span class="token-operator">|&gt;</span> <span class="token-function">group_by_category</span>()
+    <span class="token-operator">|&gt;</span> <span class="token-function">summarize_groups</span>()
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># Run the pipeline</span>
+<span class="token-type">WeatherPipeline</span>.<span class="token-function">process</span>()
+<span class="token-comment"># =&gt; [</span>
+<span class="token-comment">#   %{category: :warm, count: 2, avg_temp: 30.75, cities: ["Istanbul", "Antalya"]},</span>
+<span class="token-comment">#   %{category: :hot, count: 1, avg_temp: 33.2, cities: ["Izmir"]},</span>
+<span class="token-comment">#   %{category: :mild, count: 1, avg_temp: 31.0, cities: ["Ankara"]}</span>
+<span class="token-comment"># ]</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong>iex</strong>: Interactive shell for experimenting. Use <code>IO.inspect</code> for debugging.</li>
+  <li><strong>Pattern matching</strong>: <code>=</code> is NOT assignment. It's matching. Crashes on mismatch — this is intentional.</li>
+  <li><strong>Atoms</strong>: <code>:ok</code>, <code>:error</code> — lightweight identifiers for tags and states.</li>
+  <li><strong>Data structures</strong>: Lists (linked, prepend fast), Tuples (fixed-size, fast access), Maps (key-value, flexible).</li>
+  <li><strong>Pipe <code>|></code></strong>: Passes left result as first argument to right function. Reads left to right.</li>
+  <li><strong>Enum</strong>: <code>map</code>, <code>filter</code>, <code>reduce</code> — the three pillars of data processing.</li>
+  <li><strong>Immutability</strong>: Data never changes. You create new values. This enables safe concurrency.</li>
+</ol>
+
+<hr class="fade-in">
+
+<p class="fade-in"><strong>Next</strong>: <a href="03-elixir-fundamentals-exercise.md">Module 3 Exercise</a> — Build a data processing pipeline.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="02-go-cli-http.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Go CLI & HTTP</a>
+        <a href="04-otp-genserver.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">OTP & GenServer →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

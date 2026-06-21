@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clustering & Distribution — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link active" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 10</div>
+        <h1 class="article-title">Clustering & Distribution</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 10
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            libcluster, Erlang distribution, Horde
+          </span>
+          <span class="article-meta-item lang-elixir" style="font-weight:600;color:var(--accent-purple)">
+            Elixir
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-10-clustering--distribution-week-10" class="article-title fade-in">Module 10: Clustering & Distribution (Week 10)</h1>
+
+<h2 id="what-youll-learn-this-module" class="section-title fade-in">What You'll Learn This Module</h2>
+
+<p class="fade-in">By the end of this module, you'll understand how to run Elixir across multiple machines:</p>
+
+<ol class="fade-in">
+  <li><strong>libcluster</strong> — automatic BEAM node discovery using DNS, Kubernetes, or gossip protocols</li>
+  <li><strong>Erlang distribution</strong> — the <code>Node</code> module, <code>:rpc.call</code>, and how nodes communicate</li>
+  <li><strong>Horde</strong> — distributed process registry and dynamic supervisor</li>
+  <li><strong><code>:pg</code></strong> — built-in process groups for lightweight coordination</li>
+  <li><strong>Partition tolerance</strong> — what happens when the network splits and how it heals</li>
+</ol>
+
+<p class="fade-in">This module transforms your single-node agent system into a multi-node distributed platform. Remote runs their entire 300-person engineering organization on distributed Erlang across Kubernetes. Discord runs BEAM processes across nodes transparently — you can send a message to a process on any node without knowing where it lives.</p>
+
+<hr class="fade-in">
+
+<h2 id="why-distribution-matters-for-agents" class="section-title fade-in">Why Distribution Matters for Agents</h2>
+
+<p class="fade-in">A single BEAM node can run millions of processes. But there are limits:</p>
+
+<ol class="fade-in">
+  <li><strong>Memory</strong> — a node has one memory space. If your agents need more RAM than one machine has, you need multiple nodes.</li>
+  <li><strong>CPU</strong> — BEAM uses all cores on one machine. For more parallelism, you need more machines.</li>
+  <li><strong>Fault isolation</strong> — if one machine dies, all processes on it die. Distributing across nodes means a hardware failure only takes down a portion of your agents.</li>
+  <li><strong>Geographic distribution</strong> — agents closer to users respond faster.</li>
+</ol>
+
+<p class="fade-in">Distribution is not optional for production agent platforms. It's the next step after mastering single-node OTP.</p>
+
+<hr class="fade-in">
+
+<h2 id="the-big-picture-how-erlang-distribution-works" class="section-title fade-in">The Big Picture: How Erlang Distribution Works</h2>
+
+<p class="fade-in">Before diving into libraries, understand what happens under the hood.</p>
+
+<p class="fade-in">Erlang nodes communicate over TCP. When you call <code>Node.connect(:"other@host")</code>, the BEAM opens a TCP connection between the two nodes. After that, processes on either node can send messages to processes on the other node — the BEAM handles the network transport transparently.</p>
+
+<p class="fade-in">Think of it like a phone call. Once two BEAM nodes are connected, they can talk. The <code>Node</code> module is the phone, <code>:rpc</code> is the calling mechanism, and process registries are the phone book.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Node A (agent-brain-1@10.0.0.1)  ←→  Node B (agent-brain-2@10.0.0.2)
+    │                                       │
+    ├─ Process Registry                     ├─ Process Registry
+    ├─ Supervisor Tree                      ├─ Supervisor Tree
+    └─ ETS Tables                           └─ ETS Tables</code></pre></div>
+</div>
+
+<p class="fade-in">Each node has its own process registry, supervisor tree, and memory. The BEAM synchronizes process names and messages across nodes.</p>
+
+<hr class="fade-in">
+
+<h2 id="pattern-1-libcluster--automatic-node-discovery" class="section-title fade-in">Pattern 1: libcluster — Automatic Node Discovery</h2>
+
+<h3 id="the-problem" class="content-subtitle fade-in">The Problem</h3>
+
+<p class="fade-in">When you start two BEAM nodes, they don't know about each other. You have to manually tell each node the other's name and host. In a dynamic environment like Kubernetes, where nodes come and go, manual configuration is impossible.</p>
+
+<h3 id="how-libcluster-solves-it" class="content-subtitle fade-in">How libcluster Solves It</h3>
+
+<p class="fade-in">libcluster automatically discovers and connects BEAM nodes using configurable strategies. It runs in your supervision tree and periodically checks for new nodes using a strategy (DNS, Kubernetes API, gossip, etc.).</p>
+
+<h3 id="dns-strategy" class="content-subtitle fade-in">DNS Strategy</h3>
+
+<p class="fade-in">The simplest strategy for non-Kubernetes environments. libcluster queries a DNS server and connects to any BEAM nodes it finds.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">ClusterSupervisor</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  The cluster supervisor that manages automatic node discovery.
+
+  libcluster runs as a supervisor in your supervision tree.
+  It periodically executes the configured strategy to find new nodes
+  and connect to them. When nodes leave, libcluster disconnects them.
+
+  Think of libcluster as a receptionist who automatically adds and
+  removes people from a meeting room as they arrive and leave.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">child_spec</span>(_opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># libcluster expects a list of cluster strategies</span>
+    <span class="token-comment"># Each strategy has a name and configuration</span>
+    strategies = [
+      <span class="token-comment"># Strategy 1: DNS-based discovery</span>
+      <span class="token-comment"># This works for any environment with DNS</span>
+      <span class="token-comment"># libcluster queries the DNS server for A records matching a pattern</span>
+      %<span class="token-type">Cluster.Strategy.Epmd</span>,
+      %<span class="token-type">Cluster.Strategy.Gossip</span>,
+      %<span class="token-type">Cluster.Strategy.Kubernetes</span>,
+      %<span class="token-type">Cluster.Strategy.DNSPoll</span>,
+      %<span class="token-type">Cluster.Strategy.StaticNodes</span>
+    ]
+
+    <span class="token-comment"># libcluster starts its own supervisor with strategies as children</span>
+    <span class="token-comment"># Each strategy runs its own polling loop</span>
+    %{
+      id: <span class="token-type">Cluster.Supervisor</span>,
+      start: {<span class="token-type">Cluster.Supervisor</span>, <span class="token-atom">:start_link</span>, [[strategies], [name: <span class="token-type">Cluster.Supervisor</span>]]},
+      type: <span class="token-atom">:supervisor</span>
+    }
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="kubernetes-strategy" class="content-subtitle fade-in">Kubernetes Strategy</h3>
+
+<p class="fade-in">In Kubernetes, pods are ephemeral — they start, stop, and restart. libcluster's Kubernetes strategy queries the Kubernetes API to find pods with a specific label.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">KubernetesCluster</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  Kubernetes-based cluster strategy for libcluster.
+
+  This strategy queries the Kubernetes API server for pods matching
+  a label selector. Each pod running your application has a label
+  like "</span>app: agent-brain<span class="token-string">". libcluster finds all pods with that label
+  and connects to their BEAM nodes.
+
+  DEEP DIVE: Why Kubernetes labels instead of DNS?
+  - DNS requires you to manage DNS records manually
+  - Kubernetes labels are automatic — every pod gets them
+  - Labels are queryable in real-time via the API
+  - No DNS propagation delay
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">def</span> strategy_config <span class="token-keyword">do</span>
+    %<span class="token-type">Cluster.Strategy.Kubernetes</span>{
+      <span class="token-comment"># The Kubernetes API endpoint (usually https://kubernetes.default.svc)</span>
+      kubernetes_node_basename: <span class="token-string">"agent-brain"</span>,
+
+      <span class="token-comment"># The label selector to find pods</span>
+      <span class="token-comment"># All pods with label "app=agent-brain" will be discovered</span>
+      kubernetes_selector: <span class="token-string">"app=agent-brain"</span>,
+
+      <span class="token-comment"># The Kubernetes namespace to search in</span>
+      kubernetes_namespace: <span class="token-string">"production"</span>,
+
+      <span class="token-comment"># How often to poll the Kubernetes API (in seconds)</span>
+      polling_interval: <span class="token-number">5_000</span>,
+
+      <span class="token-comment"># The DNS suffix for the Kubernetes service</span>
+      <span class="token-comment"># Pods are reachable at: &lt;pod-ip&gt;.&lt;namespace&gt;.pod.cluster.local</span>
+      kubernetes_dns_domain: <span class="token-string">"cluster.local"</span>
+    }
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="gossip-strategy" class="content-subtitle fade-in">Gossip Strategy</h3>
+
+<p class="fade-in">Gossip is the simplest strategy for development. Nodes broadcast their presence on a UDP multicast address. Any node listening on that address can discover others.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># DEEP DIVE: How gossip works</span>
+<span class="token-comment"># 1. Each node broadcasts its name on a multicast address</span>
+<span class="token-comment"># 2. Other nodes listening on that address receive the broadcast</span>
+<span class="token-comment"># 3. Nodes connect to each other</span>
+<span class="token-comment"># 4. No central authority — fully decentralized</span>
+#
+<span class="token-comment"># Gossip is great for development and small clusters.</span>
+<span class="token-comment"># For production with 10+ nodes, use DNS or Kubernetes strategy</span>
+<span class="token-comment"># because gossip creates O(n²) network traffic.</span>
+#
+<span class="token-comment"># COMMON MISTAKE: Using gossip in production with many nodes.</span>
+<span class="token-comment"># Each node broadcasts to every other node. With 10 nodes, that's</span>
+<span class="token-comment"># 90 messages per broadcast cycle. With 100 nodes, it's 9,900.</span>
+<span class="token-comment"># Use DNS or Kubernetes for large clusters.</span>
+
+%<span class="token-type">Cluster.Strategy.Gossip</span></code></pre></div>
+</div>
+
+<h3 id="static-nodes-development" class="content-subtitle fade-in">Static Nodes (Development)</h3>
+
+<p class="fade-in">For local development, you can hardcode node names:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># DEEP DIVE: Static nodes is only for development.</span>
+<span class="token-comment"># In production, nodes are dynamic — they come and go.</span>
+<span class="token-comment"># Hardcoding node names in production means you have to restart</span>
+<span class="token-comment"># all nodes when you add or remove one. That's a maintenance nightmare.</span>
+
+%<span class="token-type">Cluster.Strategy.StaticNodes</span>{
+  <span class="token-comment"># List of node names to connect to</span>
+  nodes: [
+    :<span class="token-string">"agent-brain-1@127.0.0.1"</span>,
+    :<span class="token-string">"agent-brain-2@127.0.0.1"</span>,
+    :<span class="token-string">"agent-brain-3@127.0.0.1"</span>
+  ]
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-2-the-node-module" class="section-title fade-in">Pattern 2: The Node Module</h2>
+
+<h3 id="basic-node-operations" class="content-subtitle fade-in">Basic Node Operations</h3>
+
+<p class="fade-in">The <code>Node</code> module is built into Erlang. It gives you direct control over distributed BEAM nodes.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">NodeInspector</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  Utility module for inspecting and managing BEAM node connections.
+
+  The Node module is built into Erlang — no dependencies needed.
+  It gives you three essential operations:
+  1. Identify the current node
+  2. List connected nodes
+  3. Connect/disconnect from other nodes
+  "</span><span class="token-string">""</span>
+
+  <span class="token-comment"># Get the current node's name</span>
+  <span class="token-comment"># Returns: atom like :"agent-brain-1@10.0.0.1"</span>
+  #
+  <span class="token-comment"># DEEP DIVE: The node name format is &lt;name&gt;@&lt;host&gt;.</span>
+  <span class="token-comment"># The name is set when you start the BEAM with --sname or --name.</span>
+  <span class="token-comment"># --sname uses short names (hostname only): --sname agent-brain-1</span>
+  <span class="token-comment"># --name uses fully qualified names: --name agent-brain-1@10.0.0.1</span>
+  <span class="token-comment"># Production should always use --name for cross-network communication.</span>
+  <span class="token-keyword">def</span> current_node <span class="token-keyword">do</span>
+    <span class="token-type">Node</span>.<span class="token-keyword">self</span>()
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># List all nodes connected to the current node</span>
+  <span class="token-comment"># Returns: list of node name atoms</span>
+  #
+  <span class="token-comment"># This list changes dynamically as nodes connect and disconnect.</span>
+  <span class="token-comment"># Don't cache it — always call fresh.</span>
+  <span class="token-keyword">def</span> connected_nodes <span class="token-keyword">do</span>
+    <span class="token-type">Node</span>.<span class="token-function">list</span>()
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Connect to another node</span>
+  <span class="token-comment"># Returns: :yes if already connected, :pong if connection succeeded, :pang if failed</span>
+  #
+  <span class="token-comment"># COMMON MISTAKE: Not handling the :pang return.</span>
+  <span class="token-comment"># :pang means the other node is unreachable. This happens when:</span>
+  <span class="token-comment"># - The node is not started yet</span>
+  <span class="token-comment"># - Network is down</span>
+  <span class="token-comment"># - Firewall blocks the connection</span>
+  <span class="token-comment"># - Node name is wrong</span>
+  <span class="token-keyword">def</span> <span class="token-function">connect_to</span>(node_name) <span class="token-keyword">do</span>
+    <span class="token-keyword">case</span> <span class="token-type">Node</span>.<span class="token-function">connect</span>(node_name) <span class="token-keyword">do</span>
+      <span class="token-atom">:yes</span> -&gt; {<span class="token-atom">:already_connected</span>, node_name}
+      <span class="token-atom">:pong</span> -&gt; {<span class="token-atom">:connected</span>, node_name}
+      <span class="token-atom">:pang</span> -&gt; {<span class="token-atom">:failed</span>, node_name, <span class="token-string">"node unreachable"</span>}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Disconnect from a node</span>
+  <span class="token-comment"># Returns: true if disconnected, false if not connected</span>
+  #
+  <span class="token-comment"># DEEP DIVE: Disconnecting doesn't kill processes on the other node.</span>
+  <span class="token-comment"># It just stops communication. The other node's processes keep running</span>
+  <span class="token-comment"># but can no longer send messages to processes on this node.</span>
+  <span class="token-keyword">def</span> <span class="token-function">disconnect_from</span>(node_name) <span class="token-keyword">do</span>
+    <span class="token-type">Node</span>.<span class="token-function">disconnect</span>(node_name)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Check if a node is alive and connected</span>
+  <span class="token-comment"># Returns: true or false</span>
+  #
+  <span class="token-comment"># DEEP DIVE: Node.ping is different from Node.connect.</span>
+  <span class="token-comment"># Node.connect establishes a connection.</span>
+  <span class="token-comment"># Node.ping checks if a connection is alive.</span>
+  <span class="token-comment"># Use ping for health checks, connect for establishing connections.</span>
+  <span class="token-keyword">def</span> node_alive?(node_name) <span class="token-keyword">do</span>
+    <span class="token-type">Node</span>.<span class="token-function">ping</span>(node_name) == <span class="token-atom">:pong</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="rpc--remote-procedure-calls" class="content-subtitle fade-in">RPC — Remote Procedure Calls</h3>
+
+<p class="fade-in"><code>:rpc</code> lets you call a function on a remote node as if it were local.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">RemoteAgent</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  Module for calling functions on remote BEAM nodes.
+
+  RPC (Remote Procedure Call) lets you execute a function on a remote
+  node and get the result back. The BEAM handles the serialization
+  and network transport.
+
+  DEEP DIVE: How RPC works under the hood
+  1. You call :rpc.call(:"</span>remote@host", <span class="token-type">Module</span>, <span class="token-atom">:function</span>, [args])
+  <span class="token-number">2</span>. <span class="token-type">The</span> local <span class="token-type">BEAM</span> serializes the function <span class="token-keyword">and</span> arguments
+  <span class="token-number">3</span>. <span class="token-type">The</span> serialized data is sent over the <span class="token-type">TCP</span> connection
+  <span class="token-number">4</span>. <span class="token-type">The</span> remote <span class="token-type">BEAM</span> deserializes <span class="token-keyword">and</span> executes the function
+  <span class="token-number">5</span>. <span class="token-type">The</span> result is serialized <span class="token-keyword">and</span> sent back
+  <span class="token-number">6</span>. <span class="token-type">The</span> local <span class="token-type">BEAM</span> deserializes <span class="token-keyword">and</span> returns the result
+  #
+  <span class="token-comment"># This is different from GenServer.call which uses process messaging.</span>
+  <span class="token-comment"># RPC is simpler but less fault-tolerant — if the remote node crashes</span>
+  <span class="token-comment"># during execution, your caller may crash too.</span>
+  #
+  <span class="token-comment"># COMMON MISTAKE: Using RPC for everything.</span>
+  <span class="token-comment"># RPC is convenient but dangerous in production:</span>
+  <span class="token-comment"># - No backpressure — the remote node can be overwhelmed</span>
+  <span class="token-comment"># - No retry — if the call fails, you have to handle it yourself</span>
+  <span class="token-comment"># - No supervision — the remote function runs outside your supervision tree</span>
+  <span class="token-comment"># Use GenServer.call for critical operations, RPC for convenience.</span>
+
+  <span class="token-comment"># Call a function on a remote node</span>
+  <span class="token-comment"># Returns: the function's return value, or {:error, reason}</span>
+  <span class="token-keyword">def</span> <span class="token-function">call_remote</span>(node_name, module, function, args) <span class="token-keyword">do</span>
+    <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+      <span class="token-comment"># :rpc.call is the fundamental RPC operation</span>
+      <span class="token-comment"># It returns whatever the remote function returns</span>
+      <span class="token-comment"># If the remote node is unreachable, it returns :nodedown</span>
+      <span class="token-keyword">case</span> <span class="token-atom">:rpc</span>.<span class="token-function">call</span>(node_name, module, function, args) <span class="token-keyword">do</span>
+        {<span class="token-atom">:badrpc</span>, reason} -&gt;
+          <span class="token-comment"># COMMON MISTAKE: Ignoring :badrpc errors.</span>
+          <span class="token-comment"># :badrpc means the call failed. Common reasons:</span>
+          <span class="token-comment"># - :nodedown — node is not connected</span>
+          <span class="token-comment"># - :timeout — call took too long</span>
+          <span class="token-comment"># - :no_module — module doesn't exist on remote node</span>
+          <span class="token-comment"># - :no_function — function doesn't exist on remote node</span>
+          {<span class="token-atom">:error</span>, reason}
+
+        result -&gt;
+          <span class="token-comment"># Call succeeded — return the result</span>
+          result
+      <span class="token-keyword">end</span>
+    <span class="token-keyword">rescue</span>
+      e -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-type">Exception</span>.<span class="token-function">message</span>(e)}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Execute a function on ALL connected nodes</span>
+  <span class="token-comment"># This is useful for distributed operations like cache invalidation</span>
+  #
+  <span class="token-comment"># Returns: list of {node_name, result} tuples</span>
+  <span class="token-keyword">def</span> <span class="token-function">broadcast_call</span>(module, function, args) <span class="token-keyword">do</span>
+    <span class="token-comment"># Get all connected nodes</span>
+    nodes = <span class="token-type">Node</span>.<span class="token-function">list</span>()
+
+    <span class="token-comment"># Call the function on each node in parallel</span>
+    <span class="token-comment"># DEEP DIVE: We use Task.async_stream for parallel execution.</span>
+    <span class="token-comment"># This is important because:</span>
+    <span class="token-comment"># 1. Slow nodes don't block fast nodes</span>
+    <span class="token-comment"># 2. We can set a timeout for the entire operation</span>
+    <span class="token-comment"># 3. Failed calls don't crash the broadcaster</span>
+    <span class="token-type">Task</span>.<span class="token-function">async_stream</span>(nodes, <span class="token-keyword">fn</span> node -&gt;
+      result = <span class="token-function">call_remote</span>(node, module, function, args)
+      {node, result}
+    <span class="token-keyword">end</span>, timeout: <span class="token-number">5_000</span>, on_timeout: <span class="token-atom">:kill_task</span>)
+    <span class="token-operator">|&gt;</span> <span class="token-type">Enum</span>.<span class="token-function">to_list</span>()
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-3-horde--distributed-process-registry" class="section-title fade-in">Pattern 3: Horde — Distributed Process Registry</h2>
+
+<h3 id="the-problem" class="content-subtitle fade-in">The Problem</h3>
+
+<p class="fade-in">In a single BEAM node, <code>Registry</code> gives you process name registration. But <code>Registry</code> only works locally — a process registered on node A is invisible to node B.</p>
+
+<p class="fade-in">Horde solves this by providing a <strong>distributed process registry</strong>. Processes registered through Horde are visible and reachable from any node in the cluster.</p>
+
+<h3 id="how-horde-works" class="content-subtitle fade-in">How Horde Works</h3>
+
+<p class="fade-in">Horde has two components:</p>
+<ol class="fade-in">
+  <li><strong>Horde.Registry</strong> — distributed process name registration</li>
+  <li><strong>Horde.DynamicSupervisor</strong> — distributed process supervision</li>
+</ol>
+
+<p class="fade-in">Think of Horde as a distributed phone book. When you register a process, Horde writes it in the phone book on ALL nodes. When you look up a process, Horde reads from the local copy of the phone book.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">AgentRegistry</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A distributed process registry for agents.
+
+  Horde.Registry gives each agent a cluster-wide unique name.
+  You can find any agent from any node by name.
+
+  DEEP DIVE: Why Horde instead of Erlang's built-in pg2 or :pg?
+  - Horde uses a CRDT (Conflict-free Replicated Data Type) for consistency
+  - pg2 was deprecated in OTP 23 (replaced by :pg)
+  - :pg is built-in but doesn't support distributed nodes
+  - Horde works across nodes with automatic conflict resolution
+  #
+  # COMMON MISTAKE: Using Registry instead of Horde.Registry
+  # for distributed systems. Registry only works on one node.
+  # If you register a process on node A, node B can't find it.
+  # Always use Horde.Registry for distributed applications.
+
+  def child_spec(_opts) do
+    %{
+      id: __MODULE__,
+      start: {Horde.Registry, :start_link, [
+        [
+          name: __MODULE__,
+          # CRDT strategy determines how registry state is synced across nodes
+          # DeltaCrdt is the recommended strategy for production
+          # It syncs only changes (deltas) instead of the full state
+          keys: :unique,
+          members: :auto
+        ]
+      ]},
+      type: :supervisor
+    }
+  end
+
+  # Register a process with a unique name
+  # The name must be unique across the entire cluster
+  #
+  # Returns: :ok or {:error, reason}
+  def register_agent(agent_id, pid) do
+    # DEEP DIVE: The registration key format matters.
+    # We use {:agent, agent_id} as the key because:
+    # 1. It's a tuple — Horde supports any term as a key
+    # 2. It's namespaced — we can register other things too
+    # 3. It's unique — we can't accidentally register two agents with the same ID
+    case Horde.Registry.register(__MODULE__, {:agent, agent_id}, pid) do
+      {:ok, _} -&gt;
+        :ok
+      {:error, {:already_registered, existing_pid}} -&gt;
+        # COMMON MISTAKE: Not handling :already_registered.
+        # This happens when:
+        # - You try to register an ID that's already taken
+        # - A previous process with the same ID crashed and the registration
+        #   is still being cleaned up
+        # You should either use the existing PID or wait and retry.
+        {:error, {:already_registered, existing_pid}}
+    end
+  end
+
+  # Look up an agent by ID
+  # Returns: {:ok, pid} or :error
+  #
+  # This works from ANY node in the cluster.
+  # Horde handles the distributed lookup automatically.
+  def lookup_agent(agent_id) do
+    case Horde.Registry.lookup(__MODULE__, {:agent, agent_id}) do
+      [{pid, _}] -&gt;
+        # Found exactly one process with this ID
+        {:ok, pid}
+      [] -&gt;
+        # No process with this ID is registered
+        :error
+      multiple -&gt;
+        # COMMON MISTAKE: Not handling multiple registrations.
+        # This shouldn't happen with :unique keys, but if it does,
+        # it means the registry is in an inconsistent state.
+        # Take the first one and log a warning.
+        {pid, _} = List.first(multiple)
+        IO.puts("</span>[<span class="token-type">AgentRegistry</span>] <span class="token-type">WARNING</span>: <span class="token-type">Multiple</span> registrations for <span class="token-comment">#{agent_id}")</span>
+        {<span class="token-atom">:ok</span>, pid}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Get all registered agents across the cluster</span>
+  <span class="token-comment"># Returns: list of {agent_id, pid} tuples</span>
+  #
+  <span class="token-comment"># DEEP DIVE: This scans the ENTIRE registry.</span>
+  <span class="token-comment"># For large registries, this is expensive.</span>
+  <span class="token-comment"># Consider using Horde.Registry.select/2 for pattern-based lookups</span>
+  <span class="token-comment"># if you only need a subset of agents.</span>
+  <span class="token-keyword">def</span> all_agents <span class="token-keyword">do</span>
+    <span class="token-type">Horde.Registry</span>.<span class="token-function">select</span>(__MODULE__, [
+      <span class="token-comment"># Pattern match on any key that starts with :agent</span>
+      {{{<span class="token-atom">:agent</span>, :<span class="token-string">"$1"</span>}, :<span class="token-string">"$2"</span>, :<span class="token-string">"$3"</span>}, [], [{{:<span class="token-string">"$1"</span>, :<span class="token-string">"$3"</span>}}]}
+    ])
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="hordedynamicsupervisor--distributed-supervision" class="content-subtitle fade-in">Horde.DynamicSupervisor — Distributed Supervision</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">AgentSupervisor</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span>"
+  <span class="token-type">A</span> distributed supervisor for agents.
+
+  <span class="token-type">Horde.DynamicSupervisor</span> distributes agent processes across nodes.
+  <span class="token-type">When</span> a node joins the cluster, agents are rebalanced.
+  <span class="token-type">When</span> a node fails, its agents are restarted on surviving nodes.
+
+  <span class="token-type">DEEP</span> <span class="token-type">DIVE</span>: <span class="token-type">How</span> agent redistribution works
+  <span class="token-number">1</span>. <span class="token-type">Node</span> <span class="token-type">A</span> starts an agent under <span class="token-type">Horde.DynamicSupervisor</span>
+  <span class="token-number">2</span>. <span class="token-type">Horde</span> decides which node should host the <span class="token-function">agent</span> (usually the node
+  <span class="token-comment">#    where the supervisor started it)</span>
+  <span class="token-number">3</span>. <span class="token-type">If</span> node <span class="token-type">A</span> dies, <span class="token-type">Horde</span> detects the death
+  <span class="token-number">4</span>. <span class="token-type">Horde</span> restarts the agent on node <span class="token-type">B</span> (<span class="token-keyword">or</span> <span class="token-type">C</span>, whichever is available)
+  <span class="token-number">5</span>. <span class="token-type">The</span> agent<span class="token-string">'s state is lost (unless you persisted it)
+  #
+  # COMMON MISTAKE: Assuming agent state survives node death.
+  # State is in-memory on the original node. When the node dies,
+  # state is gone. You MUST persist state (ETS, database, etc.)
+  # if you need it to survive node failure.
+
+  def child_spec(_opts) do
+    %{
+      id: __MODULE__,
+      start: {Horde.DynamicSupervisor, :start_link, [
+        [
+          name: __MODULE__,
+          strategy: :one_for_one,
+          members: :auto
+        ]
+      ]},
+      type: :supervisor
+    }
+  end
+
+  # Start a new agent under the distributed supervisor
+  # Returns: {:ok, pid} or {:error, reason}
+  #
+  # The agent will be placed on the least-loaded node automatically.
+  # Horde handles the node selection for you.
+  def start_agent(agent_id, agent_module, args) do
+    child_spec = %{
+      id: {agent_module, agent_id},
+      start: {agent_module, :start_link, [agent_id | args]},
+      restart: :permanent
+    }
+
+    case Horde.DynamicSupervisor.start_child(__MODULE__, child_spec) do
+      {:ok, pid} -&gt;
+        # Register the agent in the distributed registry
+        case AgentRegistry.register_agent(agent_id, pid) do
+          :ok -&gt;
+            {:ok, pid}
+          {:error, reason} -&gt;
+            # Registration failed — kill the agent to avoid orphaned processes
+            # COMMON MISTAKE: Not cleaning up after registration failure.
+            # If you start an agent but can'</span>t register it, you have an orphan.
+            <span class="token-comment"># Orphaned agents consume resources and can't be found by other processes.</span>
+            <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(pid)
+            {<span class="token-atom">:error</span>, {<span class="token-atom">:registration_failed</span>, reason}}
+        <span class="token-keyword">end</span>
+
+      {<span class="token-atom">:error</span>, reason} -&gt;
+        {<span class="token-atom">:error</span>, reason}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Stop an agent across the cluster</span>
+  <span class="token-comment"># This works even if the agent is on a different node</span>
+  <span class="token-keyword">def</span> <span class="token-function">stop_agent</span>(agent_id) <span class="token-keyword">do</span>
+    <span class="token-keyword">case</span> <span class="token-type">AgentRegistry</span>.<span class="token-function">lookup_agent</span>(agent_id) <span class="token-keyword">do</span>
+      {<span class="token-atom">:ok</span>, pid} -&gt;
+        <span class="token-comment"># Stop the process — the supervisor will NOT restart it</span>
+        <span class="token-comment"># because we use :temporary restart strategy</span>
+        <span class="token-type">GenServer</span>.<span class="token-function">stop</span>(pid)
+        <span class="token-atom">:ok</span>
+
+      <span class="token-atom">:error</span> -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-atom">:not_found</span>}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-4-pg--built-in-process-groups" class="section-title fade-in">Pattern 4: <code>:pg</code> — Built-in Process Groups</h2>
+
+<h3 id="what-are-process-groups" class="content-subtitle fade-in">What Are Process Groups?</h3>
+
+<p class="fade-in">Process groups let you organize processes into named groups. Any process can join a group, and all processes in a group can communicate with each other.</p>
+
+<p class="fade-in">Think of it like a group chat. You join a group, and when someone sends a message to the group, everyone in the group receives it.</p>
+
+<h3 id="pg-vs-horde" class="content-subtitle fade-in"><code>:pg</code> vs Horde</h3>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Feature</th>
+<th><code>:pg</code></th>
+<th>Horde.Registry</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Scope</td>
+<td>Local or distributed</td>
+<td>Distributed only</td>
+</tr>
+<tr>
+<td>Registration</td>
+<td>By group name</td>
+<td>By unique key</td>
+</tr>
+<tr>
+<td>Use case</td>
+<td>Broadcasting to a group</td>
+<td>Finding a specific process</td>
+</tr>
+<tr>
+<td>Overhead</td>
+<td>Very low</td>
+<td>Higher (CRDT sync)</td>
+</tr>
+</tbody>
+</table></div>
+
+<p class="fade-in">Use <code>:pg</code> when you need to send a message to ALL processes in a group (broadcast). Use Horde when you need to find ONE specific process (lookup).</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">AgentGroups</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span>"
+  <span class="token-type">Process</span> group management for distributed agents.
+
+  <span class="token-atom">:pg</span> is built into <span class="token-type">OTP</span> <span class="token-number">23</span>+ <span class="token-keyword">and</span> provides lightweight process groups.
+  <span class="token-type">Groups</span> can span multiple nodes — perfect for broadcasting messages
+  to all agents <span class="token-keyword">in</span> a category.
+
+  <span class="token-type">DEEP</span> <span class="token-type">DIVE</span>: <span class="token-atom">:pg</span> vs pg2
+  - pg2 was removed <span class="token-keyword">in</span> <span class="token-type">OTP</span> <span class="token-number">23</span>
+  - <span class="token-atom">:pg</span> is the replacement — it<span class="token-string">'s simpler and faster
+  - :pg uses ETS for local lookups (very fast)
+  - :pg synchronizes group membership across nodes automatically
+  #
+  # COMMON MISTAKE: Using :pg for unique process registration.
+  # :pg groups are for broadcasting — multiple processes can have
+  # the same role in a group. For unique registration, use Horde.
+
+  # Start the :pg scope
+  # Scopes partition groups — processes in different scopes can'</span>t see each other
+  <span class="token-keyword">def</span> start_link <span class="token-keyword">do</span>
+    <span class="token-comment"># DEEP DIVE: Why a custom scope?</span>
+    <span class="token-comment"># The default scope is :pg. If you use the default scope,</span>
+    <span class="token-comment"># your groups might conflict with other libraries that also use :pg.</span>
+    <span class="token-comment"># A custom scope isolates your groups.</span>
+    <span class="token-atom">:pg</span>.<span class="token-function">start_link</span>(<span class="token-atom">:agent_groups</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Join a process to a group</span>
+  <span class="token-comment"># Returns: :ok</span>
+  #
+  <span class="token-comment"># A process can join multiple groups.</span>
+  <span class="token-comment"># A process can join the same group multiple times (idempotent).</span>
+  <span class="token-keyword">def</span> <span class="token-function">join_group</span>(group_name, pid \\ <span class="token-keyword">self</span>()) <span class="token-keyword">do</span>
+    <span class="token-atom">:pg</span>.<span class="token-function">join</span>(<span class="token-atom">:agent_groups</span>, group_name, pid)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Leave a process from a group</span>
+  <span class="token-comment"># Returns: :ok</span>
+  <span class="token-keyword">def</span> <span class="token-function">leave_group</span>(group_name, pid \\ <span class="token-keyword">self</span>()) <span class="token-keyword">do</span>
+    <span class="token-atom">:pg</span>.<span class="token-function">leave</span>(<span class="token-atom">:agent_groups</span>, group_name, pid)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Get all processes in a group</span>
+  <span class="token-comment"># Returns: list of pids (may be empty)</span>
+  #
+  <span class="token-comment"># DEEP DIVE: This returns pids from ALL nodes in the cluster.</span>
+  <span class="token-comment"># If node A has processes in the group and node B has processes</span>
+  <span class="token-comment"># in the group, this returns all of them.</span>
+  <span class="token-keyword">def</span> <span class="token-function">get_members</span>(group_name) <span class="token-keyword">do</span>
+    <span class="token-atom">:pg</span>.<span class="token-function">get_members</span>(<span class="token-atom">:agent_groups</span>, group_name)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Broadcast a message to all processes in a group</span>
+  <span class="token-comment"># This is the primary use case for process groups</span>
+  #
+  <span class="token-comment"># Returns: :ok</span>
+  #
+  <span class="token-comment"># DEEP DIVE: Why use :pg for broadcasting instead of GenServer.call?</span>
+  <span class="token-comment"># 1. :pg gives you the list of members for free</span>
+  <span class="token-comment"># 2. You can broadcast to N processes in parallel</span>
+  <span class="token-comment"># 3. No need to know the specific pids in advance</span>
+  <span class="token-comment"># 4. Members can join and leave dynamically</span>
+  <span class="token-keyword">def</span> <span class="token-function">broadcast_to_group</span>(group_name, message) <span class="token-keyword">do</span>
+    <span class="token-comment"># Get all members of the group</span>
+    members = <span class="token-function">get_members</span>(group_name)
+
+    <span class="token-comment"># Send the message to each member</span>
+    <span class="token-comment"># DEEP DIVE: We use send/2 instead of GenServer.call/2 because:</span>
+    <span class="token-comment"># 1. Broadcasting is fire-and-forget — we don't need responses</span>
+    <span class="token-comment"># 2. GenServer.call would serialize the broadcasts (one at a time)</span>
+    <span class="token-comment"># 3. send/2 is parallel — all members receive the message simultaneously</span>
+    <span class="token-type">Enum</span>.<span class="token-function">each</span>(members, <span class="token-keyword">fn</span> pid -&gt;
+      <span class="token-function">send</span>(pid, {<span class="token-atom">:group_message</span>, group_name, message})
+    <span class="token-keyword">end</span>)
+
+    <span class="token-atom">:ok</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Send a message to a random member of a group</span>
+  <span class="token-comment"># This is useful for load balancing — distribute work across group members</span>
+  #
+  <span class="token-comment"># Returns: :ok or {:error, :no_members}</span>
+  <span class="token-keyword">def</span> <span class="token-function">send_to_random_member</span>(group_name, message) <span class="token-keyword">do</span>
+    members = <span class="token-function">get_members</span>(group_name)
+
+    <span class="token-keyword">case</span> members <span class="token-keyword">do</span>
+      [] -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-atom">:no_members</span>}
+
+      members -&gt;
+        <span class="token-comment"># Pick a random member</span>
+        random_member = <span class="token-type">Enum</span>.<span class="token-function">random</span>(members)
+        <span class="token-function">send</span>(random_member, {<span class="token-atom">:group_message</span>, group_name, message})
+        <span class="token-atom">:ok</span>
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-5-partition-tolerance-and-auto-heal" class="section-title fade-in">Pattern 5: Partition Tolerance and Auto-Heal</h2>
+
+<h3 id="what-is-a-network-partition" class="content-subtitle fade-in">What Is a Network Partition?</h3>
+
+<p class="fade-in">A network partition is when nodes can't communicate with each other, even though they're both running. It's like a phone line being cut — both people are alive, but they can't talk.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Before partition:          During partition:
+Node A ←→ Node B          Node A    Node B
+  ↕        ↕               ↕         ↕
+Agent 1  Agent 2         Agent 1   Agent 2</code></pre></div>
+</div>
+
+<h3 id="how-beam-handles-partitions" class="content-subtitle fade-in">How BEAM Handles Partitions</h3>
+
+<p class="fade-in">The BEAM has a built-in partition detection mechanism. When nodes lose contact with each other, they mark the other node as "suspected down." If the connection isn't restored within a timeout, the node is considered "down."</p>
+
+<p class="fade-in">This is called <strong>auto-heal</strong>: when the partition resolves, nodes automatically reconnect and reconcile their state.</p>
+
+<h3 id="split_brain-protector" class="content-subtitle fade-in">split_brain Protector</h3>
+
+<p class="fade-in">For production, you need a <strong>split-brain protector</strong>. Without it, two nodes can both think they're the primary and make conflicting decisions.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">SplitBrainProtector</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A split-brain protector for distributed agent systems.
+
+  DEEP DIVE: What is split-brain?
+  Split-brain occurs when a network partition makes two nodes
+  think they're both the "</span>primary.<span class="token-string">" Both nodes accept writes,
+  and when the partition heals, you have conflicting data.
+
+  Analogy: Imagine two captains on a ship. The ship splits in half
+  during a storm. Each captain thinks they're still in charge.
+  When the storm passes and the halves reconnect, the captains
+  disagree on what happened.
+
+  The solution: only ONE node can be the primary at any time.
+  This is called leader election.
+
+  How it works:
+  1. Nodes use a lock (usually in Redis or PostgreSQL) to elect a leader
+  2. Only the leader accepts writes
+  3. If the leader dies, another node acquires the lock and becomes leader
+  4. During a partition, only the node with the lock can be leader
+  #
+  # COMMON MISTAKE: Not implementing split-brain protection.
+  # Without it, a network partition causes data inconsistency.
+  # This is the #1 cause of production distributed system failures.
+
+  use GenServer
+
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  def init(opts) do
+    state = %{
+      # The lock backend (Redis, PostgreSQL, etc.)
+      lock_backend: Keyword.fetch!(opts, :lock_backend),
+
+      # This node's identity
+      node_name: Node.self(),
+
+      # Whether this node is currently the leader
+      is_leader: false,
+
+      # Lock timeout in milliseconds (how long to hold the lock)
+      lock_timeout: Keyword.get(opts, :lock_timeout, 10_000),
+
+      # Check interval in milliseconds (how often to refresh the lock)
+      check_interval: Keyword.get(opts, :check_interval, 2_000)
+    }
+
+    # Schedule the first leadership check
+    send(self(), :check_leadership)
+
+    {:ok, state}
+  end
+
+  # Periodic leadership check
+  def handle_info(:check_leadership, state) do
+    case try_acquire_lock(state) do
+      :acquired -&gt;
+        # We are the leader
+        new_state = %{state | is_leader: true}
+        notify_leadership_change(true)
+        {:noreply, new_state, state.check_interval}
+
+      :already_held -&gt;
+        # We still hold the lock — we're still the leader
+        {:noreply, state, state.check_interval}
+
+      :failed -&gt;
+        # Someone else has the lock — we're not the leader
+        new_state = %{state | is_leader: false}
+        notify_leadership_change(false)
+        {:noreply, new_state, state.check_interval}
+    end
+  end
+
+  # Check if this node is the leader
+  def leader? do
+    GenServer.call(__MODULE__, :leader?)
+  end
+
+  def handle_call(:leader?, _from, state) do
+    {:reply, state.is_leader, state}
+  end
+
+  # Try to acquire or refresh the leadership lock
+  # Returns: :acquired, :already_held, or :failed
+  defp try_acquire_lock(state) do
+    case state.lock_backend.try_lock("</span>leader-lock<span class="token-string">", state.node_name, state.lock_timeout) do
+      true -&gt;
+        :acquired
+      false -&gt;
+        # Check if we already hold it
+        case state.lock_backend.get_lock_holder("</span>leader-lock<span class="token-string">") do
+          {:ok, ^state.node_name} -&gt;
+            :already_held
+          _ -&gt;
+            :failed
+        end
+    end
+  end
+
+  # Notify other processes when leadership changes
+  defp notify_leadership_change(is_leader) do
+    IO.puts("</span>[<span class="token-type">SplitBrain</span>] <span class="token-type">Node</span> <span class="token-comment">#{Node.self()} is now #{if is_leader, do: "LEADER", else: "FOLLOWER"}")</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="combining-everything-a-distributed-agent-cluster" class="section-title fade-in">Combining Everything: A Distributed Agent Cluster</h2>
+
+<p class="fade-in">Here's how all these patterns work together in a production system:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">DistributedAgentPlatform</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  The main application that wires all distributed components together.
+
+  Architecture:
+  1. libcluster discovers nodes automatically
+  2. Horde.Registry provides distributed process names
+  3. Horde.DynamicSupervisor distributes agent processes
+  4. :pg provides process groups for broadcasting
+  5. SplitBrainProtector ensures only one leader accepts writes
+
+  This architecture scales to hundreds of nodes and handles
+  network partitions gracefully.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">Application</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start</span>(_type, _args) <span class="token-keyword">do</span>
+    children = [
+      <span class="token-comment"># libcluster for automatic node discovery</span>
+      {<span class="token-type">Cluster.Supervisor</span>, [<span class="token-function">cluster_config</span>(), [name: <span class="token-type">Cluster.Supervisor</span>]]},
+
+      <span class="token-comment"># Horde components for distributed processes</span>
+      <span class="token-type">AgentRegistry</span>,
+      <span class="token-type">AgentSupervisor</span>,
+
+      <span class="token-comment"># Process groups for broadcasting</span>
+      {<span class="token-type">AgentGroups</span>, []},
+
+      <span class="token-comment"># Split-brain protection</span>
+      {<span class="token-type">SplitBrainProtector</span>, [
+        lock_backend: <span class="token-type">RedisLockBackend</span>,
+        lock_timeout: <span class="token-number">10_000</span>,
+        check_interval: <span class="token-number">2_000</span>
+      ]}
+    ]
+
+    opts = [strategy: <span class="token-atom">:one_for_one</span>, name: <span class="token-type">DistributedAgentPlatform.Supervisor</span>]
+    <span class="token-type">Supervisor</span>.<span class="token-function">start_link</span>(children, opts)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> cluster_config <span class="token-keyword">do</span>
+    [
+      %<span class="token-type">Cluster.Strategy.Kubernetes</span>{
+        kubernetes_node_basename: <span class="token-string">"agent-brain"</span>,
+        kubernetes_selector: <span class="token-string">"app=agent-brain"</span>,
+        kubernetes_namespace: <span class="token-string">"production"</span>,
+        polling_interval: <span class="token-number">5_000</span>
+      }
+    ]
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong>libcluster</strong> discovers and connects nodes automatically. Use Kubernetes strategy for production, DNS for non-Kubernetes, gossip for development.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Erlang distribution</strong> gives you transparent cross-node communication. Processes on different nodes can send messages to each other as if they were local.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Horde</strong> provides distributed process registration and supervision. Use it when you need cluster-wide process names and automatic redistribution.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong><code>:pg</code></strong> provides lightweight process groups for broadcasting. Use it to send messages to all agents in a category.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Partition tolerance</strong> requires a split-brain protector. Without it, network partitions cause data inconsistency. Always have a leader election mechanism.</li>
+</ol>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">In Module 11, you'll learn how to manage these distributed agents using Go Kubernetes operators. The operator watches your agent CRDs and ensures the desired state matches the actual state — the Kubernetes way.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="09-advanced-otp.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Advanced OTP Patterns</a>
+        <a href="11-go-k8s-operators.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Go K8s Operators →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

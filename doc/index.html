@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hybrid Elixir/Go Agentic Platform Engineering</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    .modules-grid { margin-top: 2rem; }
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 3rem 0 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+    .module-card.completed {
+      border-color: rgba(52, 211, 153, 0.3);
+    }
+    .module-card.completed::after {
+      content: '✓';
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 24px;
+      height: 24px;
+      background: var(--accent-emerald);
+      color: var(--bg-primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .roadmap {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+    .roadmap-step {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      border-radius: 100px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      transition: var(--transition-fast);
+    }
+    .roadmap-step:hover {
+      border-color: var(--border-accent);
+      color: var(--text-primary);
+    }
+    .roadmap-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-go { background: var(--accent-blue); }
+    .dot-elixir { background: var(--accent-purple); }
+    .dot-both { background: var(--accent-emerald); }
+    .dot-setup { background: var(--accent-amber); }
+
+    .proof-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .proof-card {
+      padding: 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      transition: var(--transition-base);
+    }
+    .proof-card:hover {
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+    }
+    .proof-company {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .proof-claim {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .proof-stack {
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links">
+        <a href="#curriculum" class="nav-link">Curriculum</a>
+        <a href="#roadmap" class="nav-link">Roadmap</a>
+        <a href="#proof" class="nav-link">Proof</a>
+        <a href="#setup" class="nav-link">Setup</a>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container-wide">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge fade-in">16-Week Production-Grade Course</div>
+      <h1 class="hero-title fade-in">
+        Hybrid <span class="gradient-text">Elixir/Go</span><br>
+        Agentic Platform Engineering
+      </h1>
+      <p class="hero-subtitle fade-in">
+        From complete beginner to job-ready Agentic Platform Engineer.
+        Elixir for the agent brain. Go for the infrastructure edge.
+        Built on patterns validated by Discord, Jido, and Remote.
+      </p>
+      <div class="hero-stats fade-in">
+        <div class="hero-stat">
+          <div class="hero-stat-value" data-count="16" data-suffix="">0</div>
+          <div class="hero-stat-label">Weeks</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value" data-count="70" data-suffix="%">0</div>
+          <div class="hero-stat-label">Elixir</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value" data-count="30" data-suffix="%">0</div>
+          <div class="hero-stat-label">Go</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value" data-count="24" data-suffix="h">0</div>
+          <div class="hero-stat-label">Per Week</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Roadmap -->
+    <section id="roadmap" class="fade-in">
+      <h2 class="section-title" style="margin-bottom:0.5rem;">Learning Roadmap</h2>
+      <p style="color:var(--text-muted);margin-bottom:1rem;">Go for infrastructure → Elixir for agents → Bridge both → Ship to production</p>
+      <div class="roadmap">
+        <div class="roadmap-step"><span class="roadmap-dot dot-setup"></span> Setup</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-go"></span> Go Fundamentals</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-go"></span> Go CLI & HTTP</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> Elixir Basics</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> OTP & GenServer</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> Supervision</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> LiveView</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> Signals</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> State & Oban</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> Advanced OTP</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-elixir"></span> Clustering</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-go"></span> K8s Operators</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-go"></span> Prometheus</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-both"></span> gRPC Bridge</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-both"></span> Observability</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-both"></span> Deployment</div>
+        <div class="roadmap-step"><span class="roadmap-dot dot-both"></span> Capstone</div>
+      </div>
+    </section>
+
+    <!-- Curriculum -->
+    <section id="curriculum">
+      <h2 class="section-title" style="margin-bottom:0.5rem;">Curriculum</h2>
+      <p style="color:var(--text-muted);margin-bottom:0.5rem;">16 modules · theory + code + exercises · click any card to start</p>
+      <p class="course-progress" style="font-size:0.8rem;color:var(--accent-emerald);margin-bottom:1rem;font-weight:600;"></p>
+
+      <div class="section-divider">Setup</div>
+      <div class="modules-grid">
+        <a href="html/00-setup.html" class="module-card fade-in stagger-1" data-module="00-setup" style="--card-accent: linear-gradient(135deg, #fbbf24, #fb7185);">
+          <span class="module-card-lang lang-setup">Setup</span>
+          <div class="module-card-number">Prerequisite</div>
+          <div class="module-card-title">Environment Setup</div>
+          <div class="module-card-desc">Install Go, Elixir, Erlang, Docker, kubectl, Terraform, and VS Code extensions.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Go 1.26+</span>
+            <span class="module-tag">Elixir 1.18+</span>
+            <span class="module-tag">Docker</span>
+            <span class="module-tag">K8s</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-divider">Weeks 1–2 · Go for Infrastructure</div>
+      <div class="modules-grid">
+        <a href="html/01-go-fundamentals.html" class="module-card fade-in stagger-1" data-module="01-go-fundamentals" style="--card-accent: var(--gradient-go);">
+          <span class="module-card-lang lang-go">Go</span>
+          <div class="module-card-number">Week 01</div>
+          <div class="module-card-title">Go Fundamentals</div>
+          <div class="module-card-desc">Variables, types, control flow, functions, structs, and interfaces. Build a CLI weather tool.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Variables</span>
+            <span class="module-tag">Structs</span>
+            <span class="module-tag">Interfaces</span>
+            <span class="module-tag">fmt</span>
+          </div>
+        </a>
+        <a href="html/02-go-cli-http.html" class="module-card fade-in stagger-2" data-module="02-go-cli-http" style="--card-accent: var(--gradient-go);">
+          <span class="module-card-lang lang-go">Go</span>
+          <div class="module-card-number">Week 02</div>
+          <div class="module-card-title">Go CLI & HTTP</div>
+          <div class="module-card-desc">Cobra CLI framework, net/http servers, graceful shutdown, middleware, health checks.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Cobra</span>
+            <span class="module-tag">net/http</span>
+            <span class="module-tag">Middleware</span>
+            <span class="module-tag">Graceful</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-divider">Weeks 3–10 · Elixir for the Agent Brain</div>
+      <div class="modules-grid">
+        <a href="html/03-elixir-fundamentals.html" class="module-card fade-in stagger-1" data-module="03-elixir-fundamentals" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 03</div>
+          <div class="module-card-title">Elixir Fundamentals</div>
+          <div class="module-card-desc">Pattern matching, pipe operator, immutability, Enum/Map. Build a data processing pipeline.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Pattern Match</span>
+            <span class="module-tag">Pipe</span>
+            <span class="module-tag">Enum</span>
+            <span class="module-tag">Atoms</span>
+          </div>
+        </a>
+        <a href="html/04-otp-genserver.html" class="module-card fade-in stagger-2" data-module="04-otp-genserver" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 04</div>
+          <div class="module-card-title">OTP & GenServer</div>
+          <div class="module-card-desc">GenServer as the atomic agent unit. State, messages, lifecycle, heartbeat. The Discord pattern.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">GenServer</span>
+            <span class="module-tag">OTP</span>
+            <span class="module-tag">Agents</span>
+            <span class="module-tag">Heartbeat</span>
+          </div>
+        </a>
+        <a href="html/05-multi-agent-supervision.html" class="module-card fade-in stagger-3" data-module="05-multi-agent-supervision" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 05</div>
+          <div class="module-card-title">Multi-Agent Supervision</div>
+          <div class="module-card-desc">Supervisor, DynamicSupervisor, Registry, parent-child agent trees. K8s at process level.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Supervisor</span>
+            <span class="module-tag">DynamicSupervisor</span>
+            <span class="module-tag">Registry</span>
+          </div>
+        </a>
+        <a href="html/06-phoenix-liveview.html" class="module-card fade-in stagger-4" data-module="06-phoenix-liveview" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 06</div>
+          <div class="module-card-title">Phoenix LiveView Dashboard</div>
+          <div class="module-card-desc">Real-time agent monitoring UI without JavaScript. HEEx templates, PubSub, LiveDashboard.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">LiveView</span>
+            <span class="module-tag">Phoenix</span>
+            <span class="module-tag">HEEx</span>
+            <span class="module-tag">Real-time</span>
+          </div>
+        </a>
+        <a href="html/07-agent-communication.html" class="module-card fade-in stagger-5" data-module="07-agent-communication" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 07</div>
+          <div class="module-card-title">Agent Communication & Signals</div>
+          <div class="module-card-desc">Process messages, PubSub broadcast, signal envelopes, event-driven coordination.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">PubSub</span>
+            <span class="module-tag">Signals</span>
+            <span class="module-tag">Directives</span>
+          </div>
+        </a>
+        <a href="html/08-agent-state-durable.html" class="module-card fade-in stagger-6" data-module="08-agent-state-durable" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 08</div>
+          <div class="module-card-title">Agent State & Durable Workflows</div>
+          <div class="module-card-desc">ETS, :persistent_term, Ecto + Postgres, Oban jobs. Agents that survive restarts.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">ETS</span>
+            <span class="module-tag">Ecto</span>
+            <span class="module-tag">Oban</span>
+            <span class="module-tag">Persistence</span>
+          </div>
+        </a>
+        <a href="html/09-advanced-otp.html" class="module-card fade-in stagger-1" data-module="09-advanced-otp" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 09</div>
+          <div class="module-card-title">Advanced OTP Patterns</div>
+          <div class="module-card-desc">:gen_statem, Task.Supervisor, GenStage backpressure, Broadway data pipelines.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">GenStage</span>
+            <span class="module-tag">Broadway</span>
+            <span class="module-tag">Backpressure</span>
+          </div>
+        </a>
+        <a href="html/10-clustering-distribution.html" class="module-card fade-in stagger-2" data-module="10-clustering-distribution" style="--card-accent: var(--gradient-elixir);">
+          <span class="module-card-lang lang-elixir">Elixir</span>
+          <div class="module-card-number">Week 10</div>
+          <div class="module-card-title">Clustering & Distribution</div>
+          <div class="module-card-desc">libcluster, Erlang distribution, Horde, multi-node agent clusters. The Remote pattern.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">libcluster</span>
+            <span class="module-tag">Horde</span>
+            <span class="module-tag">Distribution</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-divider">Weeks 11–12 · Go Infrastructure Edge</div>
+      <div class="modules-grid">
+        <a href="html/11-go-k8s-operators.html" class="module-card fade-in stagger-1" data-module="11-go-k8s-operators" style="--card-accent: var(--gradient-go);">
+          <span class="module-card-lang lang-go">Go</span>
+          <div class="module-card-number">Week 11</div>
+          <div class="module-card-title">Go K8s Operators</div>
+          <div class="module-card-desc">controller-runtime, reconciler pattern, CRDs, informers, leader election.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">controller-runtime</span>
+            <span class="module-tag">CRDs</span>
+            <span class="module-tag">Reconciler</span>
+          </div>
+        </a>
+        <a href="html/12-go-prometheus.html" class="module-card fade-in stagger-2" data-module="12-go-prometheus" style="--card-accent: var(--gradient-go);">
+          <span class="module-card-lang lang-go">Go</span>
+          <div class="module-card-number">Week 12</div>
+          <div class="module-card-title">Go Prometheus Exporters</div>
+          <div class="module-card-desc">client_golang, custom metrics, RED metrics, histograms, HTTP middleware.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Prometheus</span>
+            <span class="module-tag">RED</span>
+            <span class="module-tag">Histograms</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-divider">Weeks 13–16 · Bridge, Observe, Deploy, Ship</div>
+      <div class="modules-grid">
+        <a href="html/13-grpc-bridge.html" class="module-card fade-in stagger-1" data-module="13-grpc-bridge" style="--card-accent: var(--gradient-cool);">
+          <span class="module-card-lang lang-both">Both</span>
+          <div class="module-card-number">Week 13</div>
+          <div class="module-card-title">Bridge: gRPC</div>
+          <div class="module-card-desc">Protobuf contracts, gRPC server/client, streaming, connecting Elixir and Go.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Protobuf</span>
+            <span class="module-tag">gRPC</span>
+            <span class="module-tag">Streaming</span>
+          </div>
+        </a>
+        <a href="html/14-observability-stack.html" class="module-card fade-in stagger-2" data-module="14-observability-stack" style="--card-accent: var(--gradient-cool);">
+          <span class="module-card-lang lang-both">Both</span>
+          <div class="module-card-number">Week 14</div>
+          <div class="module-card-title">Observability Stack</div>
+          <div class="module-card-desc">OpenTelemetry, Grafana, Loki, Jaeger, LiveDashboard. Full-stack visibility.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">OpenTelemetry</span>
+            <span class="module-tag">Grafana</span>
+            <span class="module-tag">Tracing</span>
+          </div>
+        </a>
+        <a href="html/15-production-deployment.html" class="module-card fade-in stagger-3" data-module="15-production-deployment" style="--card-accent: var(--gradient-cool);">
+          <span class="module-card-lang lang-both">Both</span>
+          <div class="module-card-number">Week 15</div>
+          <div class="module-card-title">Production Deployment</div>
+          <div class="module-card-desc">Docker multi-stage, K8s manifests, Helm, Terraform, ArgoCD GitOps.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Docker</span>
+            <span class="module-tag">K8s</span>
+            <span class="module-tag">Helm</span>
+            <span class="module-tag">Terraform</span>
+          </div>
+        </a>
+        <a href="html/16-capstone.html" class="module-card fade-in stagger-4" data-module="16-capstone" style="--card-accent: linear-gradient(135deg, #fbbf24, #38bdf8, #a78bfa);">
+          <span class="module-card-lang lang-both">Both</span>
+          <div class="module-card-number">Week 16</div>
+          <div class="module-card-title">Capstone: Agentic Platform</div>
+          <div class="module-card-desc">Build the complete agentic platform. Elixir agents + Go infra + gRPC bridge + K8s.</div>
+          <div class="module-card-tags">
+            <span class="module-tag">Full Stack</span>
+            <span class="module-tag">Capstone</span>
+            <span class="module-tag">Portfolio</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Real-World Proof -->
+    <section id="proof" style="margin-top:4rem;">
+      <h2 class="section-title" style="margin-bottom:0.5rem;">Built on Production-Validated Patterns</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem;">Every concept in this course is used in production at scale.</p>
+
+      <div class="proof-grid">
+        <div class="proof-card fade-in stagger-1">
+          <div class="proof-company" style="color:var(--accent-blue);">Discord</div>
+          <div class="proof-claim">12M concurrent users on Elixir/BEAM. 4 engineers. "Go phased out — supervision trees replaced manual recovery."</div>
+          <div class="proof-stack">Elixir · OTP · BEAM · libcluster</div>
+        </div>
+        <div class="proof-card fade-in stagger-2">
+          <div class="proof-company" style="color:var(--accent-purple);">Jido</div>
+          <div class="proof-claim">1,722★ "The BEAM is the best runtime for agent systems." Every agent = GenServer.</div>
+          <div class="proof-stack">Elixir · GenServer · Agent Framework</div>
+        </div>
+        <div class="proof-card fade-in stagger-3">
+          <div class="proof-company" style="color:var(--accent-emerald);">Remote</div>
+          <div class="proof-claim">Unicorn. 300 engineers. Elixir monolith with Distributed Erlang across K8s nodes.</div>
+          <div class="proof-stack">Elixir · Distributed Erlang · K8s</div>
+        </div>
+        <div class="proof-card fade-in stagger-4">
+          <div class="proof-company" style="color:var(--accent-amber);">Infra One</div>
+          <div class="proof-claim">Fintech on BEAM. Each fund = isolated OTP process tree. Supervision handles real money.</div>
+          <div class="proof-stack">Elixir · OTP · LiveView · Oban</div>
+        </div>
+        <div class="proof-card fade-in stagger-5">
+          <div class="proof-company" style="color:var(--accent-rose);">Marketeam.ai</div>
+          <div class="proof-claim">Pure Elixir AI platform. "Reliability is the BEAM doing what it was designed to do."</div>
+          <div class="proof-stack">Elixir · Phoenix · AI Platform</div>
+        </div>
+        <div class="proof-card fade-in stagger-6">
+          <div class="proof-company" style="color:var(--accent-cyan);">Alkahest</div>
+          <div class="proof-claim">Go gateway + Elixir client + gRPC bridge. The exact architecture you'll build.</div>
+          <div class="proof-stack">Go · Elixir · gRPC · Protobuf</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Setup -->
+    <section id="setup" style="margin-top:4rem;padding-bottom:4rem;">
+      <h2 class="section-title" style="margin-bottom:0.5rem;">Quick Start</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem;">Install prerequisites and start Week 1.</p>
+
+      <div class="code-block fade-in">
+        <div class="code-header">
+          <span class="code-lang">bash</span>
+          <button class="code-copy" aria-label="Copy code">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="code-body"><pre><code><span class="token-comment"># Install Go</span>
+<span class="token-keyword">wget</span> https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+<span class="token-keyword">sudo</span> tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
+<span class="token-keyword">echo</span> <span class="token-string">'export PATH=$PATH:/usr/local/go/bin'</span> >> ~/.bashrc
+
+<span class="token-comment"># Install Elixir + Erlang (via asdf)</span>
+<span class="token-keyword">git</span> clone https://github.com/asdf-vm/asdf.git ~/.asdf
+asdf plugin add erlang elixir
+asdf install erlang 26.2.5
+asdf install elixir 1.18.4-otp-27
+
+<span class="token-comment"># Install Docker + kubectl + Terraform</span>
+<span class="token-keyword">sudo</span> apt install docker.io
+<span class="token-keyword">curl</span> -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+<span class="token-keyword">curl</span> -fsSL https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_amd64.zip</code></pre></div>
+      </div>
+
+      <div class="callout callout-info fade-in" style="margin-top:1.5rem;">
+        <span class="callout-icon">💡</span>
+        <div class="callout-title">Start Learning</div>
+        <div class="callout-body">Click <a href="html/00-setup.html" style="color:var(--accent-blue);">Environment Setup</a> for detailed installation instructions, then begin with <a href="html/01-go-fundamentals.html" style="color:var(--accent-blue);">Week 1: Go Fundamentals</a>.</div>
+      </div>
+    </section>
+
+    <footer style="text-align:center;padding:2rem 0;color:var(--text-muted);font-size:0.8rem;border-top:1px solid var(--border-subtle);">
+      <div class="agnt-badge fade-in" style="border:none;margin:0 0 1rem;">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+      <p>Built with <a href="https://github.com/huvaxstra/AGNT" style="color:var(--accent-blue);">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+    </footer>
+
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

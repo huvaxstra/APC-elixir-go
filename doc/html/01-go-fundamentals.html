@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Fundamentals — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link active" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 1</div>
+        <h1 class="article-title">Go Fundamentals</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 1
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Variables, types, control flow, functions, structs, interfaces
+          </span>
+          <span class="article-meta-item lang-go" style="font-weight:600;color:var(--accent-blue)">
+            Go
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-1-go-fundamentals" class="article-title fade-in">Module 1: Go Fundamentals</h1>
+
+<div class="callout callout-info fade-in">
+  <span class="callout-icon">💡</span>
+  <div class="callout-title">What you'll learn</div>
+  <div class="callout-body">Variables, types, control flow, functions, structs, and interfaces in Go. By the end of this module you'll build a working CLI weather tool from scratch.</div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="1-variables-and-types" class="section-title fade-in">1. Variables and Types</h2>
+
+<h3 id="variables-are-like-labeled-boxes" class="content-subtitle fade-in">Variables are like labeled boxes</h3>
+
+<p class="fade-in">Think of a variable as a labeled box in a warehouse. The label (name) tells you what's inside. The box size (type) determines what fits.</p>
+
+<p class="fade-in">Go has two ways to create variables:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// The "var" keyword — explicit, verbose, clear intent</span>
+<span class="token-keyword">var</span> cityName <span class="token-type">string</span> = <span class="token-string">"Istanbul"</span>
+
+<span class="token-comment">// The ":=" shorthand — Go infers the type from the value</span>
+population := <span class="token-number">15_840_000</span> <span class="token-comment">// Go infers: int</span>
+temperature := <span class="token-number">22.5</span>      <span class="token-comment">// Go infers: float64</span>
+isRaining := <span class="token-keyword">true</span>         <span class="token-comment">// Go infers: bool</span></code></pre></div>
+</div>
+
+<h3 id="zero-values--what-happens-when-you-forget-to-assign" class="content-subtitle fade-in">Zero values — what happens when you forget to assign</h3>
+
+<p class="fade-in">Every type in Go has a "zero value" — what the variable holds when you declare it without assigning:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">var</span> age <span class="token-type">int</span>           <span class="token-comment">// 0</span>
+<span class="token-keyword">var</span> name <span class="token-type">string</span>       <span class="token-comment">// "" (empty string)</span>
+<span class="token-keyword">var</span> active <span class="token-type">bool</span>       <span class="token-comment">// false</span>
+<span class="token-keyword">var</span> score <span class="token-type">float64</span>     <span class="token-comment">// 0.0</span></code></pre></div>
+</div>
+
+<p class="fade-in"><strong>Why this matters</strong>: Go will never give you a null pointer or undefined. Every variable starts with a known value. This eliminates an entire class of bugs.</p>
+
+<h3 id="primitive-types" class="content-subtitle fade-in">Primitive types</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// Numbers</span>
+<span class="token-keyword">var</span> count <span class="token-type">int</span> = <span class="token-number">42</span>           <span class="token-comment">// int: whole numbers, platform-dependent size</span>
+<span class="token-keyword">var</span> precise <span class="token-type">int64</span> = <span class="token-number">9_000_000_000</span> <span class="token-comment">// int64: when you need more range</span>
+<span class="token-keyword">var</span> pi <span class="token-type">float64</span> = <span class="token-number">3.14159</span>     <span class="token-comment">// float64: decimal numbers (Go's default float)</span>
+<span class="token-keyword">var</span> letter <span class="token-type">byte</span> = 'A'        <span class="token-comment">// byte: alias for uint8, represents ASCII characters</span>
+<span class="token-keyword">var</span> symbol <span class="token-type">rune</span> = '🎉'       <span class="token-comment">// rune: alias for int32, represents Unicode code points</span>
+
+<span class="token-comment">// Strings</span>
+<span class="token-keyword">var</span> greeting <span class="token-type">string</span> = <span class="token-string">"Merhaba"</span> <span class="token-comment">// UTF-8 encoded text</span>
+
+<span class="token-comment">// Boolean</span>
+<span class="token-keyword">var</span> isOnline <span class="token-type">bool</span> = <span class="token-keyword">true</span> <span class="token-comment">// true or false, nothing else</span></code></pre></div>
+</div>
+
+<p class="fade-in"><strong>DEEP DIVE</strong>: <code>byte</code> vs <code>rune</code> — A <code>byte</code> is one octet (8 bits), enough for ASCII. A <code>rune</code> is a full Unicode code point (32 bits). When you range over a string in Go, you get <code>rune</code>s because UTF-8 characters can be 1–4 bytes. Use <code>byte</code> when dealing with raw binary data. Use <code>rune</code> when dealing with text that might contain emoji or non-Latin scripts.</p>
+
+<h3 id="common-mistake--confusing--with-" class="content-subtitle fade-in">Common mistake — confusing <code>=</code> with <code>:=</code></h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// COMMON MISTAKE: Using := when you meant = (or vice versa)</span>
+
+<span class="token-comment">// := creates a NEW variable. It does NOT reassign.</span>
+x := <span class="token-number">10</span>
+x := <span class="token-number">20</span> <span class="token-comment">// COMPILE ERROR: no new variables on left side of :=</span>
+
+<span class="token-comment">// = reassigns an EXISTING variable.</span>
+x = <span class="token-number">20</span> <span class="token-comment">// This works — x already exists</span>
+
+<span class="token-comment">// You CAN use := when at least one variable on the left is new:</span>
+x, y := <span class="token-number">10</span>, <span class="token-number">20</span> <span class="token-comment">// x was declared before, y is new. This works.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="2-control-flow" class="section-title fade-in">2. Control Flow</h2>
+
+<h3 id="ifelse--conditions" class="content-subtitle fade-in">if/else — conditions</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>temperature := <span class="token-number">35</span>
+
+<span class="token-comment">// Standard if/else</span>
+<span class="token-keyword">if</span> temperature &gt; <span class="token-number">30</span> {
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"It's hot outside"</span>)
+} <span class="token-keyword">else</span> <span class="token-keyword">if</span> temperature &gt; <span class="token-number">20</span> {
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Nice weather"</span>)
+} <span class="token-keyword">else</span> {
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Bring a jacket"</span>)
+}
+
+<span class="token-comment">// Go allows a short statement before the condition</span>
+<span class="token-comment">// This creates a variable scoped ONLY to the if/else block</span>
+<span class="token-keyword">if</span> err := connectToWeatherAPI(); err != <span class="token-keyword">nil</span> {
+    <span class="token-comment">// err exists only inside this block</span>
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"Connection failed: %v\n"</span>, err)
+    <span class="token-keyword">return</span>
+}
+<span class="token-comment">// err does NOT exist here — it was scoped to the if block</span></code></pre></div>
+</div>
+
+<p class="fade-in"><strong>Why the scoped variable matters</strong>: It forces you to handle errors at the point they occur. No forgotten error checks, no leaked variables.</p>
+
+<h3 id="for--gos-only-loop" class="content-subtitle fade-in">for — Go's only loop</h3>
+
+<p class="fade-in">Go has exactly one loop keyword: <code>for</code>. It replaces <code>while</code>, <code>do-while</code>, and C-style <code>for</code> loops.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// C-style for loop</span>
+<span class="token-keyword">for</span> i := <span class="token-number">0</span>; i &lt; <span class="token-number">5</span>; i++ {
+    fmt.<span class="token-function">Println</span>(i) <span class="token-comment">// prints 0, 1, 2, 3, 4</span>
+}
+
+<span class="token-comment">// While loop equivalent (only the condition)</span>
+count := <span class="token-number">0</span>
+<span class="token-keyword">for</span> count &lt; <span class="token-number">5</span> {
+    fmt.<span class="token-function">Println</span>(count)
+    count++
+}
+
+<span class="token-comment">// Infinite loop (use break to exit)</span>
+<span class="token-keyword">for</span> {
+    input := readUserInput()
+    <span class="token-keyword">if</span> input == <span class="token-string">"quit"</span> {
+        <span class="token-keyword">break</span> <span class="token-comment">// exits the loop</span>
+    }
+    processInput(input)
+}
+
+<span class="token-comment">// Ranging over a slice (like foreach)</span>
+cities := []<span class="token-type">string</span>{<span class="token-string">"Istanbul"</span>, <span class="token-string">"Ankara"</span>, <span class="token-string">"Izmir"</span>}
+<span class="token-keyword">for</span> index, city := <span class="token-keyword">range</span> cities {
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"%d: %s\n"</span>, index, city)
+}</code></pre></div>
+</div>
+
+<h3 id="switch--no-break-needed" class="content-subtitle fade-in">switch — no break needed</h3>
+
+<p class="fade-in">Unlike C or Java, Go's <code>switch</code> does NOT fall through. Each case breaks automatically.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>day := <span class="token-string">"Monday"</span>
+
+<span class="token-keyword">switch</span> day {
+<span class="token-keyword">case</span> <span class="token-string">"Monday"</span>, <span class="token-string">"Tuesday"</span>, <span class="token-string">"Wednesday"</span>, <span class="token-string">"Thursday"</span>, <span class="token-string">"Friday"</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Work day"</span>)
+<span class="token-keyword">case</span> <span class="token-string">"Saturday"</span>, <span class="token-string">"Sunday"</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Weekend"</span>)
+<span class="token-keyword">default</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Unknown day"</span>)
+}
+
+<span class="token-comment">// Switch without a value — acts like if/else chain</span>
+score := <span class="token-number">85</span>
+
+<span class="token-keyword">switch</span> {
+<span class="token-keyword">case</span> score &gt;= <span class="token-number">90</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Excellent"</span>)
+<span class="token-keyword">case</span> score &gt;= <span class="token-number">70</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Good"</span>)
+<span class="token-keyword">default</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Needs improvement"</span>)
+}</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>COMMON MISTAKE</strong>: Expecting fallthrough behavior. If you need it, add the <code>fallthrough</code> keyword explicitly:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">switch</span> day {
+<span class="token-keyword">case</span> <span class="token-string">"Friday"</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Almost weekend"</span>)
+    <span class="token-keyword">fallthrough</span> <span class="token-comment">// explicitly falls through to next case</span>
+<span class="token-keyword">case</span> <span class="token-string">"Saturday"</span>:
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"Weekend!"</span>)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="3-functions--multiple-return-values" class="section-title fade-in">3. Functions — Multiple Return Values</h2>
+
+<p class="fade-in">Go functions can return multiple values. This is the foundation of Go's error handling pattern.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// Every function that can fail returns (result, error)</span>
+<span class="token-comment">// This is THE Go pattern — you'll see it everywhere</span>
+<span class="token-keyword">func</span> divide(a, b <span class="token-type">float64</span>) (<span class="token-type">float64</span>, <span class="token-type">error</span>) {
+    <span class="token-comment">// COMMON MISTAKE: Forgetting to check the error return</span>
+    <span class="token-keyword">if</span> b == <span class="token-number">0</span> {
+        <span class="token-keyword">return</span> <span class="token-number">0</span>, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"cannot divide by zero"</span>)
+    }
+    <span class="token-keyword">return</span> a / b, <span class="token-keyword">nil</span> <span class="token-comment">// nil means "no error"</span>
+}
+
+<span class="token-comment">// Using the function — you MUST handle both returns</span>
+result, err := divide(<span class="token-number">10</span>, <span class="token-number">3</span>)
+<span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"Error: %v\n"</span>, err)
+    <span class="token-keyword">return</span> <span class="token-comment">// exit early on error</span>
+}
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Result: %.2f\n"</span>, result) <span class="token-comment">// Result: 3.33</span></code></pre></div>
+</div>
+
+<h3 id="why-multiple-returns-matter--the-error-pattern" class="content-subtitle fade-in">Why multiple returns matter — the error pattern</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// Every Go function that can fail follows this pattern:</span>
+<span class="token-comment">//   result, err := doSomething()</span>
+<span class="token-comment">//   if err != nil {</span>
+<span class="token-comment">//       // handle error</span>
+<span class="token-comment">//       return</span>
+<span class="token-comment">//   }</span>
+<span class="token-comment">//   // use result</span>
+
+<span class="token-comment">// This is like a contract between functions:</span>
+<span class="token-comment">// "I will give you the result, OR I will tell you what went wrong.</span>
+<span class="token-comment">//  Never both. Never neither."</span>
+
+<span class="token-keyword">func</span> loadWeatherData(city <span class="token-type">string</span>) (WeatherData, <span class="token-type">error</span>) {
+    <span class="token-comment">// Step 1: Try to fetch</span>
+    resp, err := http.<span class="token-function">Get</span>(fmt.<span class="token-function">Sprintf</span>(<span class="token-string">"https://api.weather.com/%s"</span>, city))
+    <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+        <span class="token-keyword">return</span> WeatherData{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"fetch failed: %w"</span>, err)
+        <span class="token-comment">// %w wraps the original error — you can unwrap it later</span>
+    }
+    <span class="token-keyword">defer</span> resp.Body.<span class="token-function">Close</span>() <span class="token-comment">// CLOSE THE BODY when function exits</span>
+
+    <span class="token-comment">// Step 2: Try to decode</span>
+    <span class="token-keyword">var</span> data WeatherData
+    <span class="token-keyword">if</span> err := json.<span class="token-function">NewDecoder</span>(resp.Body).<span class="token-function">Decode</span>(&amp;data); err != <span class="token-keyword">nil</span> {
+        <span class="token-keyword">return</span> WeatherData{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"decode failed: %w"</span>, err)
+    }
+
+    <span class="token-keyword">return</span> data, <span class="token-keyword">nil</span>
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="4-structs--named-fields" class="section-title fade-in">4. Structs — Named Fields</h2>
+
+<p class="fade-in">Structs are like forms — they define what fields exist and what type each field holds.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// A struct is a collection of named fields</span>
+<span class="token-keyword">type</span> WeatherReport <span class="token-keyword">struct</span> {
+    City        <span class="token-type">string</span>
+    Temperature <span class="token-type">float64</span>
+    Humidity    <span class="token-type">int</span>
+    Conditions  <span class="token-type">string</span>
+    Timestamp   time.Time
+}
+
+<span class="token-comment">// Creating a struct</span>
+report := WeatherReport{
+    City:        <span class="token-string">"Istanbul"</span>,
+    Temperature: <span class="token-number">28.5</span>,
+    Humidity:    <span class="token-number">65</span>,
+    Conditions:  <span class="token-string">"Partly Cloudy"</span>,
+    Timestamp:   time.<span class="token-function">Now</span>(),
+}
+
+<span class="token-comment">// Accessing fields with dot notation</span>
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Temperature in %s: %.1f°C\n"</span>, report.City, report.Temperature)
+
+<span class="token-comment">// Struct embedding — composition over inheritance</span>
+<span class="token-keyword">type</span> Location <span class="token-keyword">struct</span> {
+    Latitude  <span class="token-type">float64</span>
+    Longitude <span class="token-type">float64</span>
+    Country   <span class="token-type">string</span>
+}
+
+<span class="token-keyword">type</span> DetailedWeatherReport <span class="token-keyword">struct</span> {
+    WeatherReport              <span class="token-comment">// embedded — fields promoted</span>
+    Location                   <span class="token-comment">// another embedded struct</span>
+    Forecast     []DailyForecast
+}
+
+<span class="token-comment">// DEEP DIVE: Embedding vs inheritance</span>
+<span class="token-comment">// Go does NOT have classes or inheritance. Instead, it has embedding.</span>
+<span class="token-comment">// When you embed Location in DetailedWeatherReport, you can access</span>
+<span class="token-comment">// report.Country directly — the fields are "promoted."</span>
+<span class="token-comment">// But it's NOT inheritance: DetailedWeatherReport IS-NOT-A Location.</span>
+<span class="token-comment">// It HAS-A Location (composition).</span>
+
+report := DetailedWeatherReport{
+    WeatherReport: WeatherReport{
+        City:        <span class="token-string">"Istanbul"</span>,
+        Temperature: <span class="token-number">28.5</span>,
+    },
+    Location: Location{
+        Latitude:  <span class="token-number">41.0082</span>,
+        Longitude: <span class="token-number">28.9784</span>,
+        Country:   <span class="token-string">"Turkey"</span>,
+    },
+}
+
+<span class="token-comment">// Fields from both embedded structs are accessible directly</span>
+fmt.<span class="token-function">Println</span>(report.City)     <span class="token-comment">// "Istanbul" — from WeatherReport</span>
+fmt.<span class="token-function">Println</span>(report.Country)  <span class="token-comment">// "Turkey" — from Location</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="5-interfaces--implicit-contracts" class="section-title fade-in">5. Interfaces — Implicit Contracts</h2>
+
+<p class="fade-in">Interfaces are the most powerful concept in Go. They define what a type MUST do, without saying HOW.</p>
+
+<h3 id="how-interfaces-work--the-implicit-implementation" class="content-subtitle fade-in">How interfaces work — the implicit implementation</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// An interface defines a contract: "Any type that has these methods</span>
+<span class="token-comment">// satisfies this interface. No declaration needed."</span>
+
+<span class="token-keyword">type</span> WeatherProvider <span class="token-keyword">interface</span> {
+    <span class="token-function">GetWeather</span>(city <span class="token-type">string</span>) (WeatherReport, <span class="token-type">error</span>)
+    <span class="token-function">GetForecast</span>(city <span class="token-type">string</span>, days <span class="token-type">int</span>) ([]DailyForecast, <span class="token-type">error</span>)
+}
+
+<span class="token-comment">// Struct A implements WeatherProvider (implicitly)</span>
+<span class="token-keyword">type</span> OpenWeatherClient <span class="token-keyword">struct</span> {
+    APIKey <span class="token-type">string</span>
+    BaseURL <span class="token-type">string</span>
+}
+
+<span class="token-comment">// We just write the methods. No "implements" keyword.</span>
+<span class="token-keyword">func</span> (c OpenWeatherClient) <span class="token-function">GetWeather</span>(city <span class="token-type">string</span>) (WeatherReport, <span class="token-type">error</span>) {
+    <span class="token-comment">// Make HTTP request to OpenWeather API</span>
+    url := fmt.<span class="token-function">Sprintf</span>(<span class="token-string">"%s/weather?q=%s&amp;appid=%s"</span>, c.BaseURL, city, c.APIKey)
+    resp, err := http.<span class="token-function">Get</span>(url)
+    <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+        <span class="token-keyword">return</span> WeatherReport{}, err
+    }
+    <span class="token-keyword">defer</span> resp.Body.<span class="token-function">Close</span>()
+
+    <span class="token-keyword">var</span> result WeatherReport
+    json.<span class="token-function">NewDecoder</span>(resp.Body).<span class="token-function">Decode</span>(&amp;result)
+    <span class="token-keyword">return</span> result, <span class="token-keyword">nil</span>
+}
+
+<span class="token-keyword">func</span> (c OpenWeatherClient) <span class="token-function">GetForecast</span>(city <span class="token-type">string</span>, days <span class="token-type">int</span>) ([]DailyForecast, <span class="token-type">error</span>) {
+    <span class="token-comment">// Implementation for forecast</span>
+    <span class="token-keyword">return</span> <span class="token-keyword">nil</span>, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// Struct B ALSO implements WeatherProvider (implicitly)</span>
+<span class="token-keyword">type</span> MockWeatherClient <span class="token-keyword">struct</span> {
+    FakeData WeatherReport
+}
+
+<span class="token-comment">// MockWeatherClient satisfies WeatherProvider too</span>
+<span class="token-comment">// because it has GetWeather AND GetForecast methods</span>
+<span class="token-keyword">func</span> (m MockWeatherClient) <span class="token-function">GetWeather</span>(city <span class="token-type">string</span>) (WeatherReport, <span class="token-type">error</span>) {
+    <span class="token-keyword">return</span> m.FakeData, <span class="token-keyword">nil</span>
+}
+
+<span class="token-keyword">func</span> (m MockWeatherClient) <span class="token-function">GetForecast</span>(city <span class="token-type">string</span>, days <span class="token-type">int</span>) ([]DailyForecast, <span class="token-type">error</span>) {
+    <span class="token-keyword">return</span> <span class="token-keyword">nil</span>, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// Now we can write code that works with ANY weather provider</span>
+<span class="token-keyword">func</span> <span class="token-function">PrintWeather</span>(provider WeatherProvider, city <span class="token-type">string</span>) {
+    weather, err := provider.<span class="token-function">GetWeather</span>(city)
+    <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+        fmt.<span class="token-function">Printf</span>(<span class="token-string">"Error: %v\n"</span>, err)
+        <span class="token-keyword">return</span>
+    }
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"Weather in %s: %.1f°C, %s\n"</span>,
+        city, weather.Temperature, weather.Conditions)
+}
+
+<span class="token-comment">// Both of these work — no type assertion needed</span>
+<span class="token-function">PrintWeather</span>(OpenWeatherClient{APIKey: <span class="token-string">"abc"</span>}, <span class="token-string">"Istanbul"</span>)
+<span class="token-function">PrintWeather</span>(MockWeatherClient{FakeData: WeatherReport{City: <span class="token-string">"Istanbul"</span>, Temperature: <span class="token-number">25</span>}}, <span class="token-string">"Istanbul"</span>)</code></pre></div>
+</div>
+
+<h3 id="why-implicit-implementation-matters" class="content-subtitle fade-in">Why implicit implementation matters</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// DEEP DIVE: Implicit vs Explicit interfaces</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// In Java/C#, you write: class Dog implements Animal { }</span>
+<span class="token-comment">// In Go, you just write the methods. No declaration.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Why? Because:</span>
+<span class="token-comment">// 1. You can implement an interface for a type you didn't write</span>
+<span class="token-comment">// 2. Libraries can define interfaces for YOUR types</span>
+<span class="token-comment">// 3. Testing is easy — just create a mock with the right methods</span>
+<span class="token-comment">// 4. No coupling between the interface definer and implementer</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// This is called "structural typing" — the structure of the type</span>
+<span class="token-comment">// determines if it satisfies the interface.</span>
+
+<span class="token-comment">// The fmt package uses interfaces extensively:</span>
+<span class="token-comment">// fmt.Stringer is the most common interface in Go:</span>
+<span class="token-keyword">type</span> Stringer <span class="token-keyword">interface</span> {
+    <span class="token-function">String</span>() <span class="token-type">string</span>
+}
+
+<span class="token-comment">// ANY type with a String() method satisfies fmt.Stringer.</span>
+<span class="token-comment">// fmt.Println, fmt.Printf, and string formatting all use it.</span>
+
+<span class="token-keyword">type</span> WeatherReport <span class="token-keyword">struct</span> {
+    City        <span class="token-type">string</span>
+    Temperature <span class="token-type">float64</span>
+}
+
+<span class="token-comment">// By adding this one method, WeatherReport now works with</span>
+<span class="token-comment">// fmt.Println, fmt.Sprintf, and anything that accepts Stringer</span>
+<span class="token-keyword">func</span> (w WeatherReport) <span class="token-function">String</span>() <span class="token-type">string</span> {
+    <span class="token-keyword">return</span> fmt.<span class="token-function">Sprintf</span>(<span class="token-string">"%s: %.1f°C"</span>, w.City, w.Temperature)
+}
+
+<span class="token-comment">// Now fmt.Println uses our String() method automatically</span>
+report := WeatherReport{City: <span class="token-string">"Istanbul"</span>, Temperature: <span class="token-number">28.5</span>}
+fmt.<span class="token-function">Println</span>(report) <span class="token-comment">// prints: Istanbul: 28.5°C</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="6-the-fmt-package--your-swiss-army-knife" class="section-title fade-in">6. The <code>fmt</code> Package — Your Swiss Army Knife</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// fmt is Go's formatting package. You'll use it constantly.</span>
+
+<span class="token-comment">// Print — basic output</span>
+fmt.<span class="token-function">Println</span>(<span class="token-string">"Hello, World"</span>)    <span class="token-comment">// prints with newline</span>
+fmt.<span class="token-function">Print</span>(<span class="token-string">"Hello"</span>)             <span class="token-comment">// no newline</span>
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Score: %d\n"</span>, <span class="token-number">42</span>) <span class="token-comment">// formatted output</span>
+
+<span class="token-comment">// Format verbs (like printf in C)</span>
+<span class="token-comment">// %d — integer</span>
+<span class="token-comment">// %f — float</span>
+<span class="token-comment">// %s — string</span>
+<span class="token-comment">// %v — default format (works for ANY type)</span>
+<span class="token-comment">// %+v — struct with field names (great for debugging)</span>
+<span class="token-comment">// %#v — Go syntax representation</span>
+<span class="token-comment">// %T — the type itself</span>
+
+city := <span class="token-string">"Istanbul"</span>
+temp := <span class="token-number">28.5</span>
+report := WeatherReport{City: city, Temperature: temp}
+
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"City: %s, Temp: %.1f\n"</span>, city, temp)  <span class="token-comment">// City: Istanbul, Temp: 28.5</span>
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Report: %v\n"</span>, report)                  <span class="token-comment">// {Istanbul 28.5 0  0001-01-01...}</span>
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Report: %+v\n"</span>, report)                 <span class="token-comment">// {City:Istanbul Temperature:28.5 ...}</span>
+fmt.<span class="token-function">Printf</span>(<span class="token-string">"Type: %T\n"</span>, report)                    <span class="token-comment">// main.WeatherReport</span>
+
+<span class="token-comment">// Sprintf — returns a string instead of printing</span>
+msg := fmt.<span class="token-function">Sprintf</span>(<span class="token-string">"Weather in %s is %.1f°C"</span>, city, temp)
+
+<span class="token-comment">// Errorf — creates an error with a message (used constantly)</span>
+err := fmt.<span class="token-function">Errorf</span>(<span class="token-string">"city %q not found"</span>, city)</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="7-putting-it-together--cli-weather-tool" class="section-title fade-in">7. Putting It Together — CLI Weather Tool</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">package</span> main
+
+<span class="token-keyword">import</span> (
+    <span class="token-string">"encoding/json"</span>
+    <span class="token-string">"fmt"</span>
+    <span class="token-string">"net/http"</span>
+    <span class="token-string">"os"</span>
+    <span class="token-string">"time"</span>
+)
+
+<span class="token-comment">// WeatherReport represents weather data for a city</span>
+<span class="token-keyword">type</span> WeatherReport <span class="token-keyword">struct</span> {
+    City        <span class="token-type">string</span>  <span class="token-string">`json:"city"`</span>
+    Temperature <span class="token-type">float64</span> <span class="token-string">`json:"temperature"`</span>
+    Humidity    <span class="token-type">int</span>     <span class="token-string">`json:"humidity"`</span>
+    Conditions  <span class="token-type">string</span>  <span class="token-string">`json:"conditions"`</span>
+    FetchedAt   <span class="token-type">string</span>  <span class="token-string">`json:"fetched_at"`</span>
+}
+
+<span class="token-comment">// WeatherProvider defines the contract for fetching weather data</span>
+<span class="token-keyword">type</span> WeatherProvider <span class="token-keyword">interface</span> {
+    <span class="token-function">GetWeather</span>(city <span class="token-type">string</span>) (WeatherReport, <span class="token-type">error</span>)
+}
+
+<span class="token-comment">// APIClient implements WeatherProvider using a real HTTP API</span>
+<span class="token-keyword">type</span> APIClient <span class="token-keyword">struct</span> {
+    BaseURL <span class="token-type">string</span>
+    Client  *http.Client
+}
+
+<span class="token-comment">// GetWeather fetches weather data from the API</span>
+<span class="token-comment">// Returns (report, nil) on success, (empty report, error) on failure</span>
+<span class="token-keyword">func</span> (a APIClient) <span class="token-function">GetWeather</span>(city <span class="token-type">string</span>) (WeatherReport, <span class="token-type">error</span>) {
+    url := fmt.<span class="token-function">Sprintf</span>(<span class="token-string">"%s/weather?city=%s"</span>, a.BaseURL, city)
+
+    resp, err := a.Client.<span class="token-function">Get</span>(url)
+    <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+        <span class="token-keyword">return</span> WeatherReport{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"API request failed: %w"</span>, err)
+    }
+    <span class="token-keyword">defer</span> resp.Body.<span class="token-function">Close</span>()
+
+    <span class="token-keyword">if</span> resp.StatusCode != http.StatusOK {
+        <span class="token-keyword">return</span> WeatherReport{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"API returned status %d"</span>, resp.StatusCode)
+    }
+
+    <span class="token-keyword">var</span> report WeatherReport
+    <span class="token-keyword">if</span> err := json.<span class="token-function">NewDecoder</span>(resp.Body).<span class="token-function">Decode</span>(&amp;report); err != <span class="token-keyword">nil</span> {
+        <span class="token-keyword">return</span> WeatherReport{}, fmt.<span class="token-function">Errorf</span>(<span class="token-string">"failed to parse response: %w"</span>, err)
+    }
+
+    report.FetchedAt = time.<span class="token-function">Now</span>().<span class="token-function">Format</span>(time.RFC3339)
+    <span class="token-keyword">return</span> report, <span class="token-keyword">nil</span>
+}
+
+<span class="token-comment">// DisplayWeather formats and prints the weather report</span>
+<span class="token-comment">// Uses the fmt package's formatting verbs for clean output</span>
+<span class="token-keyword">func</span> <span class="token-function">DisplayWeather</span>(report WeatherReport) {
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"╔══════════════════════════════════╗"</span>)
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"║  Weather Report: %-14s ║\n"</span>, report.City)
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"╠══════════════════════════════════╣"</span>)
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"║  Temperature: %-18.1f ║\n"</span>, report.Temperature)
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"║  Humidity:    %-18d ║\n"</span>, report.Humidity)
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"║  Conditions:  %-18s ║\n"</span>, report.Conditions)
+    fmt.<span class="token-function">Printf</span>(<span class="token-string">"║  Fetched at:  %-18s ║\n"</span>, report.FetchedAt[:<span class="token-number">19</span>])
+    fmt.<span class="token-function">Println</span>(<span class="token-string">"╚══════════════════════════════════╝"</span>)
+}
+
+<span class="token-keyword">func</span> main() {
+    <span class="token-comment">// Check for city argument</span>
+    <span class="token-keyword">if</span> <span class="token-keyword">len</span>(os.Args) &lt; <span class="token-number">2</span> {
+        fmt.<span class="token-function">Fprintf</span>(os.Stderr, <span class="token-string">"Usage: weather &lt;city&gt;\n"</span>)
+        os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+    }
+
+    city := os.Args[<span class="token-number">1</span>]
+
+    <span class="token-comment">// Create API client with timeout</span>
+    client := &amp;http.Client{Timeout: <span class="token-number">10</span> * time.Second}
+    provider := APIClient{
+        BaseURL: <span class="token-string">"https://api.weather.example.com"</span>,
+        Client:  client,
+    }
+
+    <span class="token-comment">// Fetch weather</span>
+    report, err := provider.<span class="token-function">GetWeather</span>(city)
+    <span class="token-keyword">if</span> err != <span class="token-keyword">nil</span> {
+        fmt.<span class="token-function">Fprintf</span>(os.Stderr, <span class="token-string">"Error: %v\n"</span>, err)
+        os.<span class="token-function">Exit</span>(<span class="token-number">1</span>)
+    }
+
+    <span class="token-comment">// Display result</span>
+    <span class="token-function">DisplayWeather</span>(report)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong>Variables</strong>: Use <code>:=</code> for new variables, <code>=</code> for reassignment. Go has zero values — every variable starts known.</li>
+  <li><strong>Types</strong>: <code>int</code>, <code>string</code>, <code>bool</code>, <code>float64</code>, <code>byte</code> (ASCII), <code>rune</code> (Unicode).</li>
+  <li><strong>Control flow</strong>: <code>if</code> with scoped variables, <code>for</code> (only loop), <code>switch</code> (no fallthrough).</li>
+  <li><strong>Functions</strong>: Multiple return values enable the <code>(result, error)</code> pattern.</li>
+  <li><strong>Structs</strong>: Named fields, embedding for composition. No inheritance.</li>
+  <li><strong>Interfaces</strong>: Implicit implementation — just write the methods. No <code>implements</code> keyword.</li>
+  <li><strong>fmt</strong>: <code>%v</code> for debugging, <code>%d/%f/%s</code> for specific types, <code>%+v</code> for struct fields.</li>
+</ol>
+
+<hr class="fade-in">
+
+<p class="fade-in"><strong>Next</strong>: <a href="01-go-fundamentals-exercise.md">Module 1 Exercise</a> — Build a CLI weather tool from scratch.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="00-setup.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Environment Setup</a>
+        <a href="02-go-cli-http.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Go CLI & HTTP →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>
