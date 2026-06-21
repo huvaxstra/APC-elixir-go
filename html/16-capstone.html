@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capstone: Agentic Platform — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link active" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 16</div>
+        <h1 class="article-title">Capstone: Agentic Platform</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 16
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Complete platform combining everything
+          </span>
+          <span class="article-meta-item lang-both" style="font-weight:600;color:var(--accent-emerald)">
+            Both
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-16-capstone--agentic-platform" class="article-title fade-in">Module 16: Capstone — Agentic Platform</h1>
+
+<div class="callout callout-info fade-in">
+  <span class="callout-icon">💡</span>
+  <div class="callout-title">Note</div>
+  <div class="callout-body"><strong>Week 16 · Final Project</strong> Build a complete Agentic Platform combining Elixir agent brain + Go infrastructure edge + gRPC bridge + Kubernetes deployment.</div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="learning-objectives" class="section-title fade-in">Learning Objectives</h2>
+
+<p class="fade-in">By the end of this capstone, you will have:</p>
+<ul class="fade-in">
+  <li>Built a production-grade agentic platform with real-time agent monitoring</li>
+  <li>Implemented multi-agent supervision with hierarchical fault tolerance</li>
+  <li>Connected Elixir and Go via gRPC with protobuf contracts</li>
+  <li>Deployed the entire platform to Kubernetes with Terraform and Helm</li>
+  <li>Created a portfolio project that proves job-readiness</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="architecture-overview" class="section-title fade-in">Architecture Overview</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>                         Elixir BEAM Cluster
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │  Supervisor   │    │  Supervisor   │    │  Supervisor   │  │
+│  │(agent pool)   │    │(job queue)    │    │(dashboard)    │  │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘  │
+│         │                   │                   │           │
+│  ┌──────┴───────┐    ┌──────┴───────┐    ┌──────┴───────┐  │
+│  │   Agent A    │◄──►│   Agent B    │◄──►│   Agent C    │  │
+│  │  GenServer   │    │  GenServer   │    │  GenServer   │  │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘  │
+│         │                   │                   │           │
+│         └─────────┬─────────┴─────────┬─────────┘           │
+│                   │                   │                     │
+│             libcluster           Phoenix PubSub             │
+│          (node discovery)       (agent events)              │
+│                   │                                         │
+│                   │ gRPC (protobuf contracts)               │
+├───────────────────┴─────────────────────────────────────────┤
+│                                                             │
+│   ┌──────────────────────┐   ┌────────────────────────┐    │
+│   │  Go K8s Operator     │   │  Go Prometheus Exporter │    │
+│   │  (controller-runtime)│   │  (client_golang)        │    │
+│   └──────────────────────┘   └────────────────────────┘    │
+│                                                             │
+│   ┌──────────────────────┐                                  │
+│   │  Go CLI Tool         │                                  │
+│   │  (cobra/viper)       │                                  │
+│   └──────────────────────┘                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="components" class="section-title fade-in">Components</h2>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Component</th>
+<th>Language</th>
+<th>What It Does</th>
+<th>Inspired By</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Agent BEAM cluster</td>
+<td>Elixir</td>
+<td>OTP supervision managing 1000+ agent processes</td>
+<td>Discord, Jido</td>
+</tr>
+<tr>
+<td>Multi-agent hierarchy</td>
+<td>Elixir</td>
+<td>Parent agents supervise child sub-agents</td>
+<td>Sagents, Infra One</td>
+</tr>
+<tr>
+<td>Agent dashboard</td>
+<td>Elixir</td>
+<td>Phoenix LiveView real-time monitoring UI</td>
+<td>Marketeam</td>
+</tr>
+<tr>
+<td>Durable jobs</td>
+<td>Elixir</td>
+<td>Oban workers for alert processing</td>
+<td>Iteration Layer</td>
+</tr>
+<tr>
+<td>Clustering</td>
+<td>Elixir</td>
+<td>libcluster multi-node BEAM</td>
+<td>Remote</td>
+</tr>
+<tr>
+<td>K8s operator</td>
+<td>Go</td>
+<td>controller-runtime CRD reconciliation</td>
+<td>CNCF standard</td>
+</tr>
+<tr>
+<td>Prometheus exporter</td>
+<td>Go</td>
+<td>client_golang infrastructure metrics</td>
+<td>CNCF standard</td>
+</tr>
+<tr>
+<td>CLI tool</td>
+<td>Go</td>
+<td>cobra single-binary management</td>
+<td>Industry standard</td>
+</tr>
+<tr>
+<td>gRPC bridge</td>
+<td>Both</td>
+<td>Protobuf contracts connecting runtimes</td>
+<td>Alkahest, Spawn</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Both</td>
+<td>OpenTelemetry + Grafana + LiveDashboard</td>
+<td>Marketeam</td>
+</tr>
+</tbody>
+</table></div>
+
+<hr class="fade-in">
+
+<h2 id="implementation-order" class="section-title fade-in">Implementation Order</h2>
+
+<p class="fade-in"><strong>Elixir first, Go after.</strong> The agent brain is the core — Go infra is added once agents work.</p>
+
+<h3 id="phase-1-agent-core-days-1-3" class="content-subtitle fade-in">Phase 1: Agent Core (Days 1-3)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>project/elixir/
+  agent_platform/
+    lib/
+      agent_platform/
+        application.ex          ← Supervision tree root
+        agent/
+          gen_agent.ex          ← GenServer agent (Week 4)
+          agent_supervisor.ex   ← DynamicSupervisor (Week 5)
+          agent_registry.ex     ← Registry for discovery (Week 5)
+        communication/
+          signal_bus.ex         ← PubSub event bus (Week 7)
+          signal.ex             ← Signal envelope struct (Week 7)
+        persistence/
+          agent_state.ex        ← Ecto schema (Week 8)
+          repo.ex               ← Database repo
+        jobs/
+          alert_worker.ex       ← Oban worker (Week 8)
+          health_check.ex       ← Periodic health check
+    priv/repo/migrations/
+      001_create_agents.sql
+    mix.exs
+    config/
+      config.exs
+      runtime.exs</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li><code>GenAgent</code> — GenServer with state (id, status, metrics, heartbeat)</li>
+  <li><code>AgentSupervisor</code> — DynamicSupervisor starting agents on demand</li>
+  <li><code>AgentRegistry</code> — Name-based process discovery</li>
+  <li><code>SignalBus</code> — PubSub broadcast for agent events</li>
+  <li><code>AgentState</code> — Ecto schema for durable persistence</li>
+  <li><code>AlertWorker</code> — Oban job processing alerts</li>
+</ol>
+
+<h3 id="phase-2-dashboard-days-4-5" class="content-subtitle fade-in">Phase 2: Dashboard (Days 4-5)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>project/elixir/
+  agent_platform/
+    lib/
+      agent_platform_web/
+        live/
+          dashboard_live.ex     ← LiveView dashboard
+          agent_live.ex         ← Individual agent view
+        components/
+          dashboard.html.heex   ← Dashboard template
+          agent_card.html.heex  ← Agent card component
+          metrics_chart.html.heex ← Metrics display
+        endpoint.ex
+        router.ex</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li><code>DashboardLive</code> — Real-time agent overview (counts, status, alerts)</li>
+  <li><code>AgentLive</code> — Individual agent detail view</li>
+  <li>PubSub subscription for live updates</li>
+  <li>LiveDashboard integration for VM metrics</li>
+</ol>
+
+<h3 id="phase-3-go-infrastructure-days-6-8" class="content-subtitle fade-in">Phase 3: Go Infrastructure (Days 6-8)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>project/go/
+  operator/
+    main.go                    ← K8s operator entry point
+    controllers/
+      agent_controller.go      ← Reconciler for Agent CRD
+    api/
+      v1/
+        agent_types.go         ← CRD type definitions
+    go.mod
+  exporter/
+    main.go                    ← Prometheus exporter entry point
+    metrics/
+      agent_metrics.go         ← Custom agent metrics
+    go.mod
+  cli/
+    cmd/
+      root.go                  ← Cobra root command
+      agents.go                ← Agent management commands
+      status.go                ← Platform status command
+    main.go
+    go.mod</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li><strong>K8s Operator</strong> — Watches Agent CRD, reconciles desired state</li>
+  <li><strong>Prometheus Exporter</strong> — Exposes agent metrics at /metrics</li>
+  <li><strong>CLI Tool</strong> — <code>agentctl list</code>, <code>agentctl status</code>, <code>agentctl create</code></li>
+</ol>
+
+<h3 id="phase-4-bridge-days-9-10" class="content-subtitle fade-in">Phase 4: Bridge (Days 9-10)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>project/bridge/
+  proto/
+    agent_bridge.proto         ← Protobuf contract
+  go/
+    server/
+      bridge_server.go         ← Go gRPC server
+    go.mod
+  elixir/
+    lib/
+      agent_platform/
+        bridge/
+          grpc_client.ex       ← Elixir gRPC client</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li><code>agent_bridge.proto</code> — Shared protobuf contract</li>
+  <li>Go gRPC server — Reports infrastructure metrics to Elixir</li>
+  <li>Elixir gRPC client — Receives metrics, commands Go services</li>
+</ol>
+
+<h3 id="phase-5-deploy-days-11-12" class="content-subtitle fade-in">Phase 5: Deploy (Days 11-12)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>deploy/
+  docker/
+    Dockerfile.elixir           ← Multi-stage Elixir build
+    Dockerfile.go               ← Multi-stage Go build
+  k8s/
+    namespace.yaml
+    deployment-elixir.yaml
+    deployment-operator.yaml
+    deployment-exporter.yaml
+    service-elixir.yaml
+    service-exporter.yaml
+    configmap.yaml
+    secret.yaml
+  helm/
+    agent-platform/
+      Chart.yaml
+      values.yaml
+      templates/
+  terraform/
+    main.tf
+    variables.tf
+    outputs.tf</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li>Dockerfiles (multi-stage for both Elixir and Go)</li>
+  <li>K8s manifests for all services</li>
+  <li>Helm chart for parameterized deployment</li>
+  <li>Terraform modules for cluster provisioning</li>
+</ol>
+
+<h3 id="phase-6-tests--polish-days-13-14" class="content-subtitle fade-in">Phase 6: Tests & Polish (Days 13-14)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>project/elixir/agent_platform/test/
+  agent_platform/
+    agent/
+      gen_agent_test.exs
+      agent_supervisor_test.exs
+    communication/
+      signal_bus_test.exs
+    persistence/
+      agent_state_test.exs
+    web/
+      dashboard_live_test.exs
+
+project/go/operator/*_test.go
+project/go/exporter/*_test.go
+project/go/cli/*_test.go</code></pre></div>
+</div>
+
+<p class="fade-in"><strong>What to build:</strong></p>
+<ol class="fade-in">
+  <li>ExUnit tests for all Elixir modules</li>
+  <li>go test for all Go modules</li>
+  <li>Integration tests for gRPC bridge</li>
+  <li>LiveView tests for dashboard</li>
+</ol>
+
+<hr class="fade-in">
+
+<h2 id="how-each-weeks-concepts-are-used" class="section-title fade-in">How Each Week's Concepts Are Used</h2>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Week</th>
+<th>Concept</th>
+<th>Where in Capstone</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Go Fundamentals</td>
+<td>All Go code: variables, structs, interfaces</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Go CLI & HTTP</td>
+<td>CLI tool (cobra), health check endpoints</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Elixir Fundamentals</td>
+<td>All Elixir code: pattern matching, pipes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>OTP & GenServer</td>
+<td>GenAgent — the core agent unit</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Multi-Agent Supervision</td>
+<td>AgentSupervisor, AgentRegistry</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Phoenix LiveView</td>
+<td>DashboardLive, AgentLive</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Agent Communication</td>
+<td>SignalBus, signal envelopes</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Agent State & Oban</td>
+<td>AgentState (Ecto), AlertWorker (Oban)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Advanced OTP</td>
+<td>Oban as Broadway-like pipeline</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Clustering</td>
+<td>libcluster multi-node agent cluster</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Go K8s Operators</td>
+<td>Agent CRD operator</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Go Prometheus</td>
+<td>Agent metrics exporter</td>
+</tr>
+<tr>
+<td>13</td>
+<td>gRPC Bridge</td>
+<td>protobuf contracts, Go↔Elixir bridge</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Observability</td>
+<td>OpenTelemetry, Grafana, LiveDashboard</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Deployment</td>
+<td>Docker, K8s, Helm, Terraform</td>
+</tr>
+</tbody>
+</table></div>
+
+<hr class="fade-in">
+
+<h2 id="testing-strategy" class="section-title fade-in">Testing Strategy</h2>
+
+<h3 id="elixir-tests-exunit" class="content-subtitle fade-in">Elixir Tests (ExUnit)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># test/agent_platform/agent/gen_agent_test.exs</span>
+<span class="token-keyword">defmodule</span> <span class="token-type">AgentPlatform.Agent.GenAgentTest</span> <span class="token-keyword">do</span>
+  <span class="token-keyword">use</span> <span class="token-type">ExUnit.Case</span>
+
+  <span class="token-keyword">alias</span> <span class="token-type">AgentPlatform.Agent.GenAgent</span>
+
+  test <span class="token-string">"agent starts with initial state"</span> <span class="token-keyword">do</span>
+    {<span class="token-atom">:ok</span>, pid} = <span class="token-type">GenAgent</span>.<span class="token-function">start_link</span>(id: <span class="token-string">"test-001"</span>)
+    state = <span class="token-type">GenAgent</span>.<span class="token-function">get_state</span>(pid)
+    assert state.id == <span class="token-string">"test-001"</span>
+    assert state.status == <span class="token-atom">:initializing</span>
+  <span class="token-keyword">end</span>
+
+  test <span class="token-string">"agent transitions status"</span> <span class="token-keyword">do</span>
+    {<span class="token-atom">:ok</span>, pid} = <span class="token-type">GenAgent</span>.<span class="token-function">start_link</span>(id: <span class="token-string">"test-002"</span>)
+    <span class="token-atom">:ok</span> = <span class="token-type">GenAgent</span>.<span class="token-function">update_status</span>(pid, <span class="token-atom">:running</span>)
+    state = <span class="token-type">GenAgent</span>.<span class="token-function">get_state</span>(pid)
+    assert state.status == <span class="token-atom">:running</span>
+  <span class="token-keyword">end</span>
+
+  test <span class="token-string">"agent reports heartbeat"</span> <span class="token-keyword">do</span>
+    {<span class="token-atom">:ok</span>, pid} = <span class="token-type">GenAgent</span>.<span class="token-function">start_link</span>(id: <span class="token-string">"test-003"</span>)
+    state = <span class="token-type">GenAgent</span>.<span class="token-function">get_state</span>(pid)
+    assert %<span class="token-type">DateTime</span>{} = state.heartbeat
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="go-tests" class="content-subtitle fade-in">Go Tests</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">operator/controllers/agent_controller_test.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// operator/controllers/agent_controller_test.go</span>
+<span class="token-keyword">func</span> <span class="token-function">TestAgentReconciler</span>(t *testing.T) {
+    reconciler := &amp;AgentReconciler{Client: fakeClient}
+    req := ctrl.Request{NamespacedName: types.NamespacedName{
+        Name: <span class="token-string">"test-agent"</span>, Namespace: <span class="token-string">"default"</span>,
+    }}
+    result, err := reconciler.<span class="token-function">Reconcile</span>(context.<span class="token-function">Background</span>(), req)
+    assert.<span class="token-function">NoError</span>(t, err)
+    assert.<span class="token-function">Equal</span>(t, ctrl.Result{}, result)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="deployment-steps" class="section-title fade-in">Deployment Steps</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># 1. Build Docker images</span>
+docker build -t agent-platform:elixir -f deploy/docker/Dockerfile.elixir .
+docker build -t agent-platform:operator -f deploy/docker/Dockerfile.go .
+
+<span class="token-comment"># 2. Push to registry</span>
+docker push registry.example.com/agent-platform:elixir
+docker push registry.example.com/agent-platform:operator
+
+<span class="token-comment"># 3. Deploy with Helm</span>
+helm install agent-platform deploy/helm/agent-platform \
+  --<span class="token-keyword">set</span> image.elixir.tag=latest \
+  --<span class="token-keyword">set</span> image.operator.tag=latest
+
+<span class="token-comment"># 4. Verify</span>
+kubectl get pods -n agent-platform
+kubectl port-forward svc/agent-platform 4000:4000
+<span class="token-comment"># Open http://localhost:4000/dashboard</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="success-criteria" class="section-title fade-in">Success Criteria</h2>
+
+<ul class="fade-in">
+  <li>[ ] 1000+ agent processes running under supervision</li>
+  <li>[ ] Dashboard shows real-time agent status (updates < 100ms)</li>
+  <li>[ ] Agent crash → automatic restart within 1 second</li>
+  <li>[ ] gRPC bridge passes metrics from Go to Elixir</li>
+  <li>[ ] Prometheus exporter serves /metrics with agent data</li>
+  <li>[ ] CLI tool can list, create, and inspect agents</li>
+  <li>[ ] All tests pass (ExUnit + go test)</li>
+  <li>[ ] Deployed to K8s with Terraform provisioned cluster</li>
+  <li>[ ] Observability: traces, metrics, logs visible in Grafana</li>
+</ul>
+
+<hr class="fade-in">
+
+<h2 id="portfolio-presentation" class="section-title fade-in">Portfolio Presentation</h2>
+
+<p class="fade-in">When presenting this capstone:</p>
+
+<ol class="fade-in">
+  <li><strong>Show the architecture diagram</strong> — explain Elixir/Go split</li>
+  <li><strong>Demo the dashboard</strong> — real-time agent monitoring</li>
+  <li><strong>Kill an agent</strong> — show automatic restart via supervision</li>
+  <li><strong>Show the CLI</strong> — create and manage agents from terminal</li>
+  <li><strong>Show Grafana</strong> — traces and metrics flowing</li>
+  <li><strong>Explain the gRPC bridge</strong> — how the two runtimes communicate</li>
+  <li><strong>Reference production companies</strong> — Discord, Jido, Remote, Infra One</li>
+</ol>
+
+<p class="fade-in">This project proves you can build production-grade agentic platforms with fault tolerance, real-time monitoring, and polyglot infrastructure.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="15-production-deployment.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Production Deployment</a>
+        <span></span>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

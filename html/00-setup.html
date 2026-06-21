@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Environment Setup — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link active" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Setup</div>
+        <h1 class="article-title">Environment Setup</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Setup
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Install Go, Elixir, Docker, and all tools
+          </span>
+          <span class="article-meta-item lang-setup" style="font-weight:600;color:var(--accent-emerald)">
+            Setup
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-0-environment-setup" class="article-title fade-in">Module 0: Environment Setup</h1>
+
+<div class="callout callout-info fade-in">
+  <span class="callout-icon">💡</span>
+  <div class="callout-title">What you'll set up</div>
+  <div class="callout-body">Complete development environment for Go, Elixir, Docker, Kubernetes, and Terraform. <strong>What you'll verify</strong>: Smoke tests for every tool, Docker Compose for PostgreSQL + Redis. <strong>Time estimate</strong>: 2-3 hours</div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="why-setup-first" class="section-title fade-in">Why Setup First</h2>
+
+<p class="fade-in">Every module in this course assumes these tools are installed and working. A broken environment wastes hours of debugging. This module ensures every tool is installed, versioned, and verified before you write a single line of code.</p>
+
+<hr class="fade-in">
+
+<h2 id="11-required-tools" class="section-title fade-in">1.1 Required Tools</h2>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Tool</th>
+<th>Minimum Version</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Go</td>
+<td>1.26+</td>
+<td>Infrastructure edge (K8s operators, Prometheus, CLI, gRPC)</td>
+</tr>
+<tr>
+<td>Erlang/OTP</td>
+<td>27+</td>
+<td>BEAM runtime for Elixir</td>
+</tr>
+<tr>
+<td>Elixir</td>
+<td>1.18+</td>
+<td>Agent brain (GenServer, Phoenix, Oban)</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>24+</td>
+<td>Container builds, local services</td>
+</tr>
+<tr>
+<td>kubectl</td>
+<td>1.32+</td>
+<td>Kubernetes cluster interaction</td>
+</tr>
+<tr>
+<td>Terraform</td>
+<td>1.10+</td>
+<td>Infrastructure as Code</td>
+</tr>
+<tr>
+<td>VS Code</td>
+<td>latest</td>
+<td>IDE with Go + Elixir extensions</td>
+</tr>
+</tbody>
+</table></div>
+
+<hr class="fade-in">
+
+<h2 id="12-install-go" class="section-title fade-in">1.2 Install Go</h2>
+
+<h3 id="linux-debianubuntu" class="content-subtitle fade-in">Linux (Debian/Ubuntu)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Download Go 1.26 binary</span>
+<span class="token-comment"># WHY: Official binary is the simplest install method</span>
+wget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+
+<span class="token-comment"># Remove any previous Go install and extract new one</span>
+<span class="token-comment"># COMMON MISTAKE: Forgetting to remove old version first — causes PATH conflicts</span>
+sudo rm -rf /usr/<span class="token-keyword">local</span>/go
+sudo tar -C /usr/<span class="token-keyword">local</span> -xzf go1.26.4.linux-amd64.tar.gz
+
+<span class="token-comment"># Add Go to PATH for current session</span>
+<span class="token-comment"># DEEP DIVE: Go binaries go to $HOME/go/bin, which must be on PATH</span>
+<span class="token-keyword">export</span> PATH=<span class="token-variable">$PATH</span>:/usr/<span class="token-keyword">local</span>/go/bin:<span class="token-variable">$HOME</span>/go/bin
+
+<span class="token-comment"># Persist across sessions</span>
+echo <span class="token-string">'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin'</span> &gt;&gt; ~/.bashrc</code></pre></div>
+</div>
+
+<h3 id="macos" class="content-subtitle fade-in">macOS</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Homebrew is the simplest path on macOS</span>
+brew install go</code></pre></div>
+</div>
+
+<h3 id="verify" class="content-subtitle fade-in">Verify</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># This should print go1.22.x or higher</span>
+go version
+
+<span class="token-comment"># GOPATH is where Go stores downloaded modules and binaries</span>
+<span class="token-comment"># WHY: You need to know this for troubleshooting module issues</span>
+go env GOPATH
+go env GOROOT</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="13-install-erlangotp-and-elixir" class="section-title fade-in">1.3 Install Erlang/OTP and Elixir</h2>
+
+<h3 id="linux-debianubuntu" class="content-subtitle fade-in">Linux (Debian/Ubuntu)</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Install Erlang/OTP 27+ — the BEAM virtual machine</span>
+<span class="token-comment"># DEEP DIVE: Erlang and Elixir are separate installs. Elixir compiles to Erlang bytecode.</span>
+<span class="token-comment"># You MUST have Erlang installed first.</span>
+
+<span class="token-comment"># Add Erlang Solutions repo for latest versions</span>
+wget https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb
+sudo dpkg -i erlang-solutions_2.0_all.deb
+sudo apt-get update
+
+<span class="token-comment"># Install Erlang OTP 27</span>
+sudo apt-get install -y erlang
+
+<span class="token-comment"># Install Elixir 1.18+ (includes mix, iex, elixir)</span>
+sudo apt-get install -y elixir
+
+<span class="token-comment"># Install hex and rebar — Elixir's package manager and build tool</span>
+<span class="token-comment"># WHY: mix will prompt you to install these anyway, but doing it now avoids interruptions</span>
+mix <span class="token-keyword">local</span>.hex --force
+mix <span class="token-keyword">local</span>.rebar --force</code></pre></div>
+</div>
+
+<h3 id="macos" class="content-subtitle fade-in">macOS</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># ASDF is the recommended version manager for Erlang + Elixir</span>
+<span class="token-comment"># WHY: Version managers let you switch between project-specific versions</span>
+brew install asdf
+
+<span class="token-comment"># Add plugins</span>
+asdf plugin add erlang
+asdf plugin add elixir
+
+<span class="token-comment"># Install specific versions</span>
+asdf install erlang 27.3.4
+asdf install elixir 1.18.4-otp-27
+
+<span class="token-comment"># Set global versions</span>
+asdf global erlang 27.3.4
+asdf global elixir 1.18.4-otp-27
+
+<span class="token-comment"># Install hex and rebar</span>
+mix <span class="token-keyword">local</span>.hex --force
+mix <span class="token-keyword">local</span>.rebar --force</code></pre></div>
+</div>
+
+<h3 id="verify" class="content-subtitle fade-in">Verify</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Erlang — should print OTP 27+</span>
+erl -<span class="token-keyword">eval</span> <span class="token-string">'erlang:display(erlang:system_info(otp_release)), halt().'</span> -noshell
+
+<span class="token-comment"># Elixir — should print 1.16.x</span>
+elixir --version
+
+<span class="token-comment"># Interactive Elixir shell — try a simple expression</span>
+iex -e <span class="token-string">'IO.puts("Elixir is working: #{System.version()}")'</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="14-install-docker" class="section-title fade-in">1.4 Install Docker</h2>
+
+<h3 id="linux" class="content-subtitle fade-in">Linux</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Install Docker Engine (not Docker Desktop on Linux)</span>
+<span class="token-comment"># WHY: Docker Desktop is for macOS/Windows. Linux uses Docker Engine directly.</span>
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+<span class="token-comment"># Add your user to the docker group so you don't need sudo</span>
+<span class="token-comment"># COMMON MISTAKE: Forgetting this — every docker command will need sudo</span>
+sudo usermod -aG docker <span class="token-variable">$USER</span>
+
+<span class="token-comment"># Log out and back in for group change to take effect</span>
+<span class="token-comment"># Then verify:</span>
+docker --version
+docker compose version</code></pre></div>
+</div>
+
+<h3 id="macos" class="content-subtitle fade-in">macOS</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Download Docker Desktop from https://www.docker.com/products/docker-desktop/</span>
+<span class="token-comment"># Install and launch — it includes docker and docker compose</span></code></pre></div>
+</div>
+
+<h3 id="verify" class="content-subtitle fade-in">Verify</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Docker version — should be 24+</span>
+docker --version
+
+<span class="token-comment"># Docker Compose version — should be v2.x</span>
+docker compose version
+
+<span class="token-comment"># Run hello-world to confirm Docker daemon is running</span>
+docker run hello-world</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="15-install-kubectl" class="section-title fade-in">1.5 Install kubectl</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Linux — official binary</span>
+curl -LO <span class="token-string">"https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl"</span>
+sudo install -o root -g root -m 0755 kubectl /usr/<span class="token-keyword">local</span>/bin/kubectl
+
+<span class="token-comment"># macOS</span>
+brew install kubectl
+
+<span class="token-comment"># Verify — shows client version (server version requires a cluster)</span>
+kubectl version --client</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="16-install-terraform" class="section-title fade-in">1.6 Install Terraform</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Linux — HashiCorp APT repository</span>
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo <span class="token-string">"deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main"</span> | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update &amp;&amp; sudo apt install terraform
+
+<span class="token-comment"># macOS</span>
+brew install terraform
+
+<span class="token-comment"># Verify — should be 1.7+</span>
+terraform --version</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="17-vs-code-extensions" class="section-title fade-in">1.7 VS Code Extensions</h2>
+
+<p class="fade-in">Install these extensions for the best development experience:</p>
+
+<h3 id="go-extensions" class="content-subtitle fade-in">Go Extensions</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code># Install via command line
+code --install-extension golang.go
+# Includes: Go language server (gopls), debugger, test runner, linter</code></pre></div>
+</div>
+
+<h3 id="elixir-extensions" class="content-subtitle fade-in">Elixir Extensions</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code># Install via command line
+code --install-extension elixir-tools.elixir-tools
+code --install-extension JakeBecker.elixir-ls
+# Elixir Tools: Mix tasks, project creation
+# ElixirLS: Language server with autocomplete, go-to-definition, dialyzer</code></pre></div>
+</div>
+
+<h3 id="useful-extras" class="content-subtitle fade-in">Useful Extras</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>code --install-extension ms-azuretools.vscode-docker
+code --install-extension hashicorp.terraform
+code --install-extension ms-kubernetes-tools.vscode-kubernetes-tools</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="18-local-services-postgresql--redis" class="section-title fade-in">1.8 Local Services: PostgreSQL + Redis</h2>
+
+<p class="fade-in">The capstone platform needs PostgreSQL (agent state persistence) and Redis (Oban job queue). Use Docker Compose to run both locally.</p>
+
+<h3 id="docker-compose-file" class="content-subtitle fade-in">Docker Compose File</h3>
+
+<p class="fade-in">Save this as <code>docker-compose.yml</code> in your project root:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># docker-compose.yml — Local development services</span>
+<span class="token-comment"># WHY: PostgreSQL for Ecto/Oban persistence, Redis for Oban job queue</span>
+<span class="token-comment"># These match what the capstone K8s deployment will use in production</span>
+<span class="token-keyword">
+version:</span> <span class="token-string">"3.8"</span>
+<span class="token-keyword">
+services:</span>
+<span class="token-keyword">  postgres:</span>
+<span class="token-keyword">    image:</span> postgres:16-alpine
+    <span class="token-comment"># ALPINE: smaller image, faster pulls, same functionality</span>
+<span class="token-keyword">    container_name:</span> agentic-postgres
+<span class="token-keyword">    environment:</span>
+<span class="token-keyword">      POSTGRES_USER:</span> postgres
+<span class="token-keyword">      POSTGRES_PASSWORD:</span> postgres
+<span class="token-keyword">      POSTGRES_DB:</span> agentic_platform
+<span class="token-keyword">    ports:</span>
+      - <span class="token-string">"5432:5432"</span>
+    <span class="token-comment"># WHY: Volume persists data across container restarts</span>
+<span class="token-keyword">    volumes:</span>
+      - postgres_data:/var/lib/postgresql/data
+    <span class="token-comment"># WHY: Health check ensures Postgres is ready before apps connect</span>
+<span class="token-keyword">    healthcheck:</span>
+<span class="token-keyword">      test:</span> [<span class="token-string">"CMD-SHELL"</span>, <span class="token-string">"pg_isready -U postgres"</span>]
+<span class="token-keyword">      interval:</span> 5s
+<span class="token-keyword">      timeout:</span> 5s
+<span class="token-keyword">      retries:</span> 5
+<span class="token-keyword">
+  redis:</span>
+<span class="token-keyword">    image:</span> redis:7-alpine
+<span class="token-keyword">    container_name:</span> agentic-redis
+<span class="token-keyword">    ports:</span>
+      - <span class="token-string">"6379:6379"</span>
+<span class="token-keyword">    volumes:</span>
+      - redis_data:/data
+    <span class="token-comment"># WHY: Redis needs AOF persistence for Oban job durability</span>
+<span class="token-keyword">    command:</span> redis-server --appendonly yes
+<span class="token-keyword">    healthcheck:</span>
+<span class="token-keyword">      test:</span> [<span class="token-string">"CMD"</span>, <span class="token-string">"redis-cli"</span>, <span class="token-string">"ping"</span>]
+<span class="token-keyword">      interval:</span> 5s
+<span class="token-keyword">      timeout:</span> 5s
+<span class="token-keyword">      retries:</span> 5
+<span class="token-keyword">
+volumes:</span>
+<span class="token-keyword">  postgres_data:</span>
+<span class="token-keyword">  redis_data:</span></code></pre></div>
+</div>
+
+<h3 id="start-services" class="content-subtitle fade-in">Start Services</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start both services in the background</span>
+docker compose up -d
+
+<span class="token-comment"># Verify both are healthy</span>
+docker compose ps
+
+<span class="token-comment"># Expected output: both services show "healthy" status</span>
+<span class="token-comment"># NAME                STATUS</span>
+<span class="token-comment"># agentic-postgres    running (healthy)</span>
+<span class="token-comment"># agentic-redis       running (healthy)</span></code></pre></div>
+</div>
+
+<h3 id="connect-to-postgresql" class="content-subtitle fade-in">Connect to PostgreSQL</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Connect to the database to verify it works</span>
+psql -h localhost -U postgres -d agentic_platform
+<span class="token-comment"># Password: postgres</span>
+
+<span class="token-comment"># You're in the psql shell — run a quick test</span>
+SELECT version();
+
+<span class="token-comment"># Exit psql</span>
+\q</code></pre></div>
+</div>
+
+<h3 id="connect-to-redis" class="content-subtitle fade-in">Connect to Redis</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Connect to Redis CLI</span>
+redis-cli
+
+<span class="token-comment"># Test the connection</span>
+PING
+<span class="token-comment"># Expected: PONG</span>
+
+<span class="token-comment"># Exit Redis CLI</span>
+<span class="token-keyword">exit</span></code></pre></div>
+</div>
+
+<h3 id="stop-services" class="content-subtitle fade-in">Stop Services</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Stop but keep data (volumes persist)</span>
+docker compose down
+
+<span class="token-comment"># Stop AND delete all data (fresh start)</span>
+docker compose down -v</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="19-smoke-tests" class="section-title fade-in">1.9 Smoke Tests</h2>
+
+<p class="fade-in">Run these commands to verify every tool works correctly. Every command should produce output without errors.</p>
+
+<h3 id="go-smoke-test" class="content-subtitle fade-in">Go Smoke Test</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Create a temp directory and run a Go program</span>
+mkdir -p /tmp/smoke-test &amp;&amp; cd /tmp/smoke-test
+
+<span class="token-comment"># Initialize a Go module</span>
+go mod init smoke-test
+
+<span class="token-comment"># Write a tiny program</span>
+cat &gt; main.go &lt;&lt; <span class="token-string">'EOF'</span>
+package main
+
+import <span class="token-string">"fmt"</span>
+
+func main() {
+    fmt.Println(<span class="token-string">"Go smoke test passed"</span>)
+}
+EOF
+
+<span class="token-comment"># Build and run</span>
+go run main.go
+<span class="token-comment"># Expected: "Go smoke test passed"</span>
+
+<span class="token-comment"># Clean up</span>
+rm -rf /tmp/smoke-test</code></pre></div>
+</div>
+
+<h3 id="elixir-smoke-test" class="content-subtitle fade-in">Elixir Smoke Test</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Create a temp Mix project</span>
+cd /tmp
+mix new smoke_test --module SmokeTest
+cd smoke_test
+
+<span class="token-comment"># Compile — should produce no warnings</span>
+mix compile
+
+<span class="token-comment"># Run the project</span>
+mix run -e <span class="token-string">'IO.puts("Elixir smoke test passed")'</span>
+<span class="token-comment"># Expected: "Elixir smoke test passed"</span>
+
+<span class="token-comment"># Clean up</span>
+rm -rf /tmp/smoke_test</code></pre></div>
+</div>
+
+<h3 id="docker-smoke-test" class="content-subtitle fade-in">Docker Smoke Test</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Run a lightweight container that prints a message</span>
+docker run --rm alpine echo <span class="token-string">"Docker smoke test passed"</span>
+<span class="token-comment"># Expected: "Docker smoke test passed"</span></code></pre></div>
+</div>
+
+<h3 id="kubectl-smoke-test" class="content-subtitle fade-in">kubectl Smoke Test</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># This will fail to connect (no cluster) but should print the client version</span>
+kubectl version --client
+<span class="token-comment"># Expected: prints client version without errors</span></code></pre></div>
+</div>
+
+<h3 id="terraform-smoke-test" class="content-subtitle fade-in">Terraform Smoke Test</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Create a temp directory and run terraform init</span>
+mkdir -p /tmp/tf-smoke &amp;&amp; cd /tmp/tf-smoke
+
+<span class="token-comment"># Write a minimal Terraform config</span>
+cat &gt; main.tf &lt;&lt; <span class="token-string">'EOF'</span>
+terraform {
+  required_version = <span class="token-string">"&gt;= 1.10.0"</span>
+}
+
+output <span class="token-string">"smoke_test"</span> {
+  value = <span class="token-string">"Terraform smoke test passed"</span>
+}
+EOF
+
+<span class="token-comment"># Initialize — downloads providers if needed</span>
+terraform init
+<span class="token-comment"># Expected: "Terraform has been successfully initialized!"</span>
+
+<span class="token-comment"># Validate the config</span>
+terraform validate
+<span class="token-comment"># Expected: "Success! The configuration is valid."</span>
+
+<span class="token-comment"># Clean up</span>
+rm -rf /tmp/tf-smoke</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="110-quick-reference" class="section-title fade-in">1.10 Quick Reference</h2>
+
+<h3 id="common-commands" class="content-subtitle fade-in">Common Commands</h3>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Task</th>
+<th>Go</th>
+<th>Elixir</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Create project</td>
+<td><code>go mod init name</code></td>
+<td><code>mix new name</code></td>
+</tr>
+<tr>
+<td>Build</td>
+<td><code>go build</code></td>
+<td><code>mix compile</code></td>
+</tr>
+<tr>
+<td>Run</td>
+<td><code>go run main.go</code></td>
+<td><code>mix run -e 'code'</code></td>
+</tr>
+<tr>
+<td>Test</td>
+<td><code>go test ./...</code></td>
+<td><code>mix test</code></td>
+</tr>
+<tr>
+<td>Format</td>
+<td><code>gofmt -w .</code></td>
+<td><code>mix format</code></td>
+</tr>
+<tr>
+<td>Lint</td>
+<td><code>golangci-lint run</code></td>
+<td><code>mix credo</code></td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td><code>go mod tidy</code></td>
+<td><code>mix deps.get</code></td>
+</tr>
+</tbody>
+</table></div>
+
+<h3 id="port-assignments" class="content-subtitle fade-in">Port Assignments</h3>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Service</th>
+<th>Port</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td>5432</td>
+<td><code>localhost:5432</code></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>6379</td>
+<td><code>localhost:6379</code></td>
+</tr>
+<tr>
+<td>Phoenix (dev)</td>
+<td>4000</td>
+<td><code>localhost:4000</code></td>
+</tr>
+<tr>
+<td>Phoenix LiveDashboard</td>
+<td>4000/dashboard</td>
+<td>Requires dev mode</td>
+</tr>
+<tr>
+<td>Prometheus</td>
+<td>9090</td>
+<td>When running exporter</td>
+</tr>
+<tr>
+<td>gRPC</td>
+<td>50051</td>
+<td>Go bridge server</td>
+</tr>
+</tbody>
+</table></div>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">Your environment is ready. Continue to <a href="01-go-fundamentals.md">Module 1: Go Fundamentals</a> to start building.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <span></span>
+        <a href="01-go-fundamentals.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Go Fundamentals →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

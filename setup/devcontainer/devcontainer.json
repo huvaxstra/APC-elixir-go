@@ -1,0 +1,92 @@
+{
+  "name": "Agentic Platform Development",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.26.4"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "elixir-tools.elixir-tools",
+        "JakeBecker.elixir-ls",
+        "ms-azuretools.vscode-docker",
+        "hashicorp.terraform",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "elixirLS.projectDir": "elixir",
+        "editor.formatOnSave": true,
+        "[go]": {
+          "editor.defaultFormatter": "golang.go"
+        },
+        "[elixir]": {
+          "editor.defaultFormatter": "elixir-tools.elixir-tools"
+        }
+      }
+    }
+  },
+  "postCreateCommand": "cd elixir && mix deps.get && cd ../go && go mod download",
+  "forwardPorts": [
+    4000,
+    50051,
+    8080,
+    9090,
+    3001,
+    4317,
+    16686
+  ],
+  "portsAttributes": {
+    "4000": {
+      "label": "Phoenix",
+      "onAutoForward": "notify"
+    },
+    "50051": {
+      "label": "gRPC Bridge",
+      "onAutoForward": "silent"
+    },
+    "8080": {
+      "label": "Go HTTP/Metrics",
+      "onAutoForward": "silent"
+    },
+    "9090": {
+      "label": "Prometheus",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Grafana",
+      "onAutoForward": "notify"
+    },
+    "4317": {
+      "label": "OTLP gRPC",
+      "onAutoForward": "silent"
+    },
+    "16686": {
+      "label": "Jaeger UI",
+      "onAutoForward": "notify"
+    }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/elixir,target=/workspace/elixir,type=bind",
+    "source=${localWorkspaceFolder}/go,target=/workspace/go,type=bind"
+  ],
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "MIX_ENV": "dev",
+    "PGHOST": "localhost",
+    "PGPORT": "5432",
+    "PGUSER": "postgres",
+    "PGPASSWORD": "postgres",
+    "PGDATABASE": "agentic_platform"
+  }
+}

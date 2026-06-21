@@ -1,0 +1,126 @@
+# Elixir Deployment — Hybrid Agentic Platform
+# Manages 3 replicas of the Elixir BEAM cluster with rolling updates,
+# health probes, and resource limits.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentic-platform
+  labels:
+    app: agentic-platform
+    component: agent-brain
+    managed-by: helm
+spec:
+  # 3 replicas survive 1 node failure without downtime
+  replicas: 3
+
+  # Rolling update: zero-downtime deploys
+  # maxSurge: 1 = allow 1 extra pod during update
+  # maxUnavailable: 0 = never reduce below 3 during update
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  selector:
+    matchLabels:
+      app: agentic-platform
+
+  template:
+    metadata:
+      labels:
+        app: agentic-platform
+        component: agent-brain
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Spread pods across nodes for fault isolation
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: agentic-platform
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: agentic-platform
+          image: agentic-platform:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+            - name: dist
+              containerPort: 4364
+              protocol: TCP
+
+          # Configuration from ConfigMap (non-sensitive)
+          envFrom:
+            - configMapRef:
+                name: agentic-platform-config
+
+          # Secrets from K8s Secrets (sensitive)
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-platform-secrets
+                  key: database-url
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-platform-secrets
+                  key: secret-key-base
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: agentic-platform-secrets
+                  key: redis-url
+
+          # Resource management — prevents one pod from starving others
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          # Liveness: restart the pod if the BEAM hangs
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Readiness: stop sending traffic if dependencies are down
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # Startup: allow 150s for BEAM to boot and compile
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+
+      # Graceful shutdown — finish in-flight requests before stopping
+      terminationGracePeriodSeconds: 60

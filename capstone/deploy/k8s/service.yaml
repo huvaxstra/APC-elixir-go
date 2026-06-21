@@ -1,0 +1,54 @@
+# Elixir Service — Stable network endpoint for the agentic platform
+# Routes traffic to all pods matching the app: agentic-platform label.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentic-platform
+  labels:
+    app: agentic-platform
+    component: agent-brain
+spec:
+  # ClusterIP: internal only. Use Ingress for external access.
+  # Prevents accidental public exposure of the agent brain.
+  type: ClusterIP
+
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: dist
+      port: 4364
+      targetPort: dist
+      protocol: TCP
+
+  selector:
+    app: agentic-platform
+
+---
+# Go Gateway Service — Stable endpoint for the infrastructure layer
+# Exposes both gRPC (50051) and HTTP (8080) ports.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-gateway
+  labels:
+    app: agent-gateway
+    component: infrastructure
+spec:
+  type: ClusterIP
+
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: grpc
+      protocol: TCP
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+
+  selector:
+    app: agent-gateway

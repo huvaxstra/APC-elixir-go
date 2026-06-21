@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced OTP Patterns — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link active" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 9</div>
+        <h1 class="article-title">Advanced OTP Patterns</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 9
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            gen_statem, Task.Supervisor, GenStage, Broadway
+          </span>
+          <span class="article-meta-item lang-elixir" style="font-weight:600;color:var(--accent-purple)">
+            Elixir
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-9-advanced-otp-patterns-week-9" class="article-title fade-in">Module 9: Advanced OTP Patterns (Week 9)</h1>
+
+<h2 id="what-youll-learn-this-module" class="section-title fade-in">What You'll Learn This Module</h2>
+
+<p class="fade-in">By the end of this module, you'll understand four advanced OTP patterns that power production agent systems:</p>
+
+<ol class="fade-in">
+  <li><strong><code>:gen_statem</code></strong> — a state machine behaviour for agents with complex lifecycle transitions</li>
+  <li><strong><code>Task.Supervisor</code></strong> — supervised async tasks for fire-and-forget work</li>
+  <li><strong><code>GenStage</code></strong> — producer-consumer pipelines with automatic backpressure</li>
+  <li><strong><code>Broadway</code></strong> — a high-level data pipeline abstraction built on GenStage</li>
+</ol>
+
+<p class="fade-in">These patterns are not theoretical. Dashbit uses Broadway for event ingestion at scale. Discord uses GenStage-style backpressure to handle millions of messages. Every production agent system needs at least one of these patterns.</p>
+
+<hr class="fade-in">
+
+<h2 id="the-problem-genserver-is-not-enough" class="section-title fade-in">The Problem: GenServer Is Not Enough</h2>
+
+<p class="fade-in">In Module 4, you learned GenServer as the agent unit. GenServer is excellent for request-response patterns: receive a message, update state, reply. But real agent systems have three problems GenServer does not solve well:</p>
+
+<ol class="fade-in">
+  <li><strong>Complex state transitions</strong> — an agent that moves between "idle", "planning", "executing", "reviewing", and "blocked" needs explicit state validation. GenServer gives you <code>handle_call</code>/<code>handle_cast</code> but no built-in way to say "you cannot go from idle to reviewing without passing through planning first."</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Unbounded async work</strong> — spawning tasks with <code>Task.start_link</code> works for small loads, but what happens when 10,000 events arrive and your consumer can only process 100/sec? You need backpressure.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Stream processing</strong> — when you need to transform a stream of events through multiple stages (parse → validate → enrich → persist), GenServer forces you to build the pipeline manually.</li>
+</ol>
+
+<p class="fade-in">Advanced OTP patterns solve all three.</p>
+
+<hr class="fade-in">
+
+<h2 id="pattern-1-gen_statem--state-machine-behaviour" class="section-title fade-in">Pattern 1: <code>:gen_statem</code> — State Machine Behaviour</h2>
+
+<h3 id="what-is-a-state-machine" class="content-subtitle fade-in">What Is a State Machine?</h3>
+
+<p class="fade-in">Think of a traffic light. It has three states: red, yellow, green. It transitions between them in a fixed order. You cannot go from red directly to green — you must pass through yellow. A state machine enforces this rule.</p>
+
+<p class="fade-in">An agent is like a traffic light for work. It has states like "idle", "planning", "executing", "reviewing". The state machine enforces that an agent cannot skip the planning step and jump straight to executing.</p>
+
+<h3 id="gen_statem-vs-genserver" class="content-subtitle fade-in"><code>:gen_statem</code> vs GenServer</h3>
+
+<p class="fade-in">GenServer gives you one state variable that you pattern match on in each callback. You <em>can</em> build state machines with GenServer, but you have to enforce the rules yourself. <code>:gen_statem</code> makes the state machine first-class:</p>
+
+<ul class="fade-in">
+  <li>Each state has its own set of allowed events</li>
+  <li>Transitions are explicit and validated</li>
+  <li>You get callbacks per state, not per message type</li>
+</ul>
+
+<h3 id="how-gen_statem-works" class="content-subtitle fade-in">How <code>:gen_statem</code> Works</h3>
+
+<p class="fade-in"><code>:gen_statem</code> is an Erlang behaviour. You implement callbacks that return what happens next. The key callback is <code>callback_mode/0</code> which tells the state machine how to dispatch events.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># DEEP DIVE: callback_mode determines how events are dispatched</span>
+<span class="token-comment"># :state_functions — one function per state, like GenServer but state-named</span>
+<span class="token-comment"># :handle_event_function — one function handles all events, pattern match on state</span>
+<span class="token-comment"># We use :state_functions because it maps naturally to agent lifecycles</span></code></pre></div>
+</div>
+
+<h3 id="a-practical-agent-state-machine" class="content-subtitle fade-in">A Practical Agent State Machine</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">AgentStateMachine</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  An agent that moves through lifecycle states with explicit transitions.
+
+  States: idle → planning → executing → reviewing → idle (or blocked → idle)
+  Each state has its own event handlers — you cannot receive events
+  meant for other states.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenStateMachine</span>, restart: <span class="token-atom">:transient</span>
+
+  <span class="token-comment"># The three required callbacks for :gen_statem</span>
+  <span class="token-comment"># DEEP DIVE: These tell the BEAM how to dispatch events to your code</span>
+
+  <span class="token-comment"># We choose :state_functions mode — one function per state name</span>
+  <span class="token-comment"># This means handle_event/4 is NOT used; instead, each state name</span>
+  <span class="token-comment"># becomes a function that handles events for that state</span>
+  <span class="token-keyword">def</span> callback_mode, <span class="token-keyword">do</span>: <span class="token-atom">:state_functions</span>
+
+  <span class="token-comment"># Called when the state machine starts. Returns the initial state.</span>
+  <span class="token-comment"># We begin in :idle because no agent starts with work assigned.</span>
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(_args) <span class="token-keyword">do</span>
+    <span class="token-comment"># State data holds the agent's context: current task, results, etc.</span>
+    state_data = %{
+      task: <span class="token-keyword">nil</span>,
+      result: <span class="token-keyword">nil</span>,
+      attempts: <span class="token-number">0</span>
+    }
+
+    <span class="token-comment"># Return: {:next_state, state_name, state_data}</span>
+    <span class="token-comment"># The state machine begins in :idle with empty data</span>
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:idle</span>, state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># STATE: idle</span>
+  <span class="token-comment"># An agent in :idle accepts only :assign_work events.</span>
+  <span class="token-comment"># It ignores :execute and :review — those are invalid in this state.</span>
+  <span class="token-comment"># ---</span>
+
+  <span class="token-comment"># Handle work assignment while idle</span>
+  <span class="token-comment"># This is the only valid event in :idle state</span>
+  <span class="token-keyword">def</span> <span class="token-function">idle</span>(<span class="token-atom">:cast</span>, {<span class="token-atom">:assign_work</span>, task}, state_data) <span class="token-keyword">do</span>
+    <span class="token-comment"># Why log? Because state transitions are audit-worthy in production.</span>
+    <span class="token-comment"># An agent moving from idle to planning is a significant event.</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Idle → Planning: #{task}"</span>)
+
+    <span class="token-comment"># Update the state data with the new task</span>
+    new_state_data = %{state_data | task: task}
+
+    <span class="token-comment"># Transition to :planning</span>
+    <span class="token-comment"># The state machine will now only accept events defined in the planning/4 function</span>
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:planning</span>, new_state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Reject any other events in idle — they're programming errors</span>
+  <span class="token-keyword">def</span> <span class="token-function">idle</span>(event_type, event_content, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Idle: ignoring #{inspect(event_type)} #{inspect(event_content)}"</span>)
+    <span class="token-atom">:keep_state_and_data</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># STATE: planning</span>
+  <span class="token-comment"># The agent creates a plan for the assigned work.</span>
+  <span class="token-comment"># Valid events: :execute_plan, :cancel</span>
+  <span class="token-comment"># ---</span>
+
+  <span class="token-comment"># Execute the plan — move to executing</span>
+  <span class="token-keyword">def</span> <span class="token-function">planning</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:execute_plan</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Planning → Executing: #{state_data.task}"</span>)
+
+    <span class="token-comment"># Start the actual work. We do NOT block here — GenStateMachine</span>
+    <span class="token-comment"># returns immediately and the agent is now in :executing state.</span>
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:executing</span>, state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Cancel — return to idle</span>
+  <span class="token-keyword">def</span> <span class="token-function">planning</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:cancel</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Planning → Idle: cancelled #{state_data.task}"</span>)
+
+    <span class="token-comment"># Clear the task from state data</span>
+    new_state_data = %{state_data | task: <span class="token-keyword">nil</span>, result: <span class="token-keyword">nil</span>}
+
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:idle</span>, new_state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">planning</span>(event_type, event_content, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Planning: ignoring #{inspect(event_type)} #{inspect(event_content)}"</span>)
+    <span class="token-atom">:keep_state_and_data</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># STATE: executing</span>
+  <span class="token-comment"># The agent is doing the actual work.</span>
+  <span class="token-comment"># Valid events: :complete, :fail, :cancel</span>
+  <span class="token-comment"># ---</span>
+
+  <span class="token-comment"># Work completed successfully — move to reviewing</span>
+  <span class="token-keyword">def</span> <span class="token-function">executing</span>(<span class="token-atom">:cast</span>, {<span class="token-atom">:complete</span>, result}, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Executing → Reviewing: #{state_data.task}"</span>)
+
+    <span class="token-comment"># Store the result for the reviewing phase</span>
+    new_state_data = %{state_data | result: result}
+
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:reviewing</span>, new_state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Work failed — increment attempts and maybe go back to planning</span>
+  <span class="token-keyword">def</span> <span class="token-function">executing</span>(<span class="token-atom">:cast</span>, {<span class="token-atom">:fail</span>, reason}, state_data) <span class="token-keyword">do</span>
+    new_attempts = state_data.attempts + <span class="token-number">1</span>
+
+    <span class="token-comment"># COMMON MISTAKE: Not handling the max-attempts case.</span>
+    <span class="token-comment"># Without this check, an agent can loop forever between</span>
+    <span class="token-comment"># planning and executing if the work always fails.</span>
+    <span class="token-keyword">if</span> new_attempts &gt;= <span class="token-number">3</span> <span class="token-keyword">do</span>
+      <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Executing → Blocked: #{reason} (max attempts reached)"</span>)
+      {<span class="token-atom">:next_state</span>, <span class="token-atom">:blocked</span>, %{state_data | attempts: new_attempts}}
+    <span class="token-keyword">else</span>
+      <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Executing → Planning: retry (#{new_attempts}/3)"</span>)
+      {<span class="token-atom">:next_state</span>, <span class="token-atom">:planning</span>, %{state_data | attempts: new_attempts}}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">executing</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:cancel</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Executing → Idle: cancelled"</span>)
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:idle</span>, %{state_data | task: <span class="token-keyword">nil</span>, result: <span class="token-keyword">nil</span>, attempts: <span class="token-number">0</span>}}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">executing</span>(event_type, event_content, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Executing: ignoring #{inspect(event_type)} #{inspect(event_content)}"</span>)
+    <span class="token-atom">:keep_state_and_data</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># STATE: reviewing</span>
+  <span class="token-comment"># The agent reviews its own work before marking it done.</span>
+  <span class="token-comment"># Valid events: :approve, :reject</span>
+  <span class="token-comment"># ---</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">reviewing</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:approve</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Reviewing → Idle: #{state_data.task} done!"</span>)
+
+    <span class="token-comment"># Return to idle with a clean slate, but keep the result as history</span>
+    new_state_data = %{state_data | task: <span class="token-keyword">nil</span>, result: <span class="token-keyword">nil</span>, attempts: <span class="token-number">0</span>}
+
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:idle</span>, new_state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">reviewing</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:reject</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Reviewing → Planning: rework needed"</span>)
+
+    <span class="token-comment"># Go back to planning with the failed result as context</span>
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:planning</span>, state_data}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">reviewing</span>(event_type, event_content, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Reviewing: ignoring #{inspect(event_type)} #{inspect(event_content)}"</span>)
+    <span class="token-atom">:keep_state_and_data</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># STATE: blocked</span>
+  <span class="token-comment"># The agent is stuck and needs human intervention.</span>
+  <span class="token-comment"># Valid events: :unblock</span>
+  <span class="token-comment"># ---</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">blocked</span>(<span class="token-atom">:cast</span>, <span class="token-atom">:unblock</span>, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Blocked → Idle: unblocked"</span>)
+    {<span class="token-atom">:next_state</span>, <span class="token-atom">:idle</span>, %{state_data | task: <span class="token-keyword">nil</span>, result: <span class="token-keyword">nil</span>, attempts: <span class="token-number">0</span>}}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">blocked</span>(event_type, event_content, state_data) <span class="token-keyword">do</span>
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{inspect(self())}] Blocked: ignoring #{inspect(event_type)} #{inspect(event_content)}"</span>)
+    <span class="token-atom">:keep_state_and_data</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="using-the-state-machine" class="content-subtitle fade-in">Using the State Machine</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start the state machine</span>
+{<span class="token-atom">:ok</span>, pid} = <span class="token-type">AgentStateMachine</span>.<span class="token-function">start_link</span>([])
+
+<span class="token-comment"># Assign work — triggers transition idle → planning</span>
+<span class="token-type">GenStateMachine</span>.<span class="token-function">cast</span>(pid, {<span class="token-atom">:assign_work</span>, <span class="token-string">"Analyze market data"</span>})
+
+<span class="token-comment"># Execute the plan — triggers transition planning → executing</span>
+<span class="token-type">GenStateMachine</span>.<span class="token-function">cast</span>(pid, <span class="token-atom">:execute_plan</span>)
+
+<span class="token-comment"># Complete the work — triggers transition executing → reviewing</span>
+<span class="token-type">GenStateMachine</span>.<span class="token-function">cast</span>(pid, {<span class="token-atom">:complete</span>, %{revenue: <span class="token-number">42_000</span>}})
+
+<span class="token-comment"># Approve — triggers transition reviewing → idle</span>
+<span class="token-type">GenStateMachine</span>.<span class="token-function">cast</span>(pid, <span class="token-atom">:approve</span>)
+
+<span class="token-comment"># COMMON MISTAKE: Trying to call a state machine with GenServer.call.</span>
+<span class="token-comment"># GenStateMachine uses its own cast/call functions.</span>
+<span class="token-comment"># GenServer.call(pid, :execute_plan) will NOT work.</span></code></pre></div>
+</div>
+
+<h3 id="when-to-use-gen_statem-vs-genserver" class="content-subtitle fade-in">When to Use <code>:gen_statem</code> vs GenServer</h3>
+
+<div class="table-wrapper fade-in"><table>
+<thead><tr>
+<th>Use <code>:gen_statem</code> when...</th>
+<th>Use GenServer when...</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Agent has 3+ distinct lifecycle states</td>
+<td>Agent has simple request-response pattern</td>
+</tr>
+<tr>
+<td>State transitions must be validated</td>
+<td>State changes are unstructured</td>
+</tr>
+<tr>
+<td>You need per-state event handling</td>
+<td>You need a simple key-value store</td>
+</tr>
+<tr>
+<td>Compliance requires audit trails of transitions</td>
+<td>Speed and simplicity matter most</td>
+</tr>
+</tbody>
+</table></div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-2-tasksupervisor--supervised-async-tasks" class="section-title fade-in">Pattern 2: <code>Task.Supervisor</code> — Supervised Async Tasks</h2>
+
+<h3 id="the-problem-with-bare-tasks" class="content-subtitle fade-in">The Problem with Bare Tasks</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># COMMON MISTAKE: Using Task.start_link without supervision</span>
+<span class="token-comment"># If the task crashes, nothing restarts it. The caller may not even know.</span>
+<span class="token-type">Task</span>.<span class="token-function">start_link</span>(<span class="token-keyword">fn</span> -&gt; <span class="token-function">dangerous_work</span>() <span class="token-keyword">end</span>)</code></pre></div>
+</div>
+
+<p class="fade-in"><code>Task.Supervisor</code> solves this by giving you a dedicated supervisor for async tasks. Tasks spawned under it are monitored and can be restarted if they crash.</p>
+
+<h3 id="how-tasksupervisor-works" class="content-subtitle fade-in">How Task.Supervisor Works</h3>
+
+<p class="fade-in">Think of <code>Task.Supervisor</code> as a temp agency. You tell the agency "I need someone to do X." The agency assigns a worker, tracks them, and if the worker gets sick, the agency handles it. You never manage workers directly.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">TaskPool</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A supervised task pool for parallel agent work.
+
+  Each agent can spawn tasks under this supervisor for parallel processing.
+  If a task crashes, the supervisor catches it and the agent can retry.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">def</span> start_link <span class="token-keyword">do</span>
+    <span class="token-comment"># Start the Task.Supervisor with a name for easy access</span>
+    <span class="token-comment"># :one_for_one restart strategy means each task is independent</span>
+    <span class="token-type">Task.Supervisor</span>.<span class="token-function">start_link</span>(name: __MODULE__)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Spawn a supervised task and return its reference</span>
+  <span class="token-comment"># Returns: {:ok, task_ref} or {:error, reason}</span>
+  #
+  <span class="token-comment"># The task_ref lets you monitor the task's lifecycle.</span>
+  <span class="token-comment"># You can receive :DOWN messages when the task completes or crashes.</span>
+  <span class="token-keyword">def</span> <span class="token-function">run_task</span>(agent_id, work_fn) <span class="token-keyword">do</span>
+    <span class="token-comment"># DEEP DIVE: Task.async_nolink is the key function here.</span>
+    <span class="token-comment"># Task.async links the task to the caller — if the task crashes,</span>
+    <span class="token-comment"># the caller crashes too. Task.async_nolink does NOT link,</span>
+    <span class="token-comment"># so the caller survives. The caller monitors instead.</span>
+    <span class="token-type">Task.Supervisor</span>.<span class="token-function">async_nolink</span>(__MODULE__, <span class="token-keyword">fn</span> -&gt;
+      <span class="token-comment"># Tag the task with the agent_id for logging and tracing</span>
+      <span class="token-type">Process</span>.<span class="token-function">put</span>(<span class="token-atom">:agent_id</span>, agent_id)
+
+      <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+        result = work_fn.()
+        {<span class="token-atom">:success</span>, result}
+      <span class="token-keyword">rescue</span>
+        e -&gt;
+          <span class="token-comment"># Return the error instead of crashing.</span>
+          <span class="token-comment"># The supervisor will log it, but the caller gets the error</span>
+          <span class="token-comment"># to handle (maybe retry, maybe escalate to a human).</span>
+          {<span class="token-atom">:error</span>, <span class="token-type">Exception</span>.<span class="token-function">message</span>(e)}
+      <span class="token-keyword">end</span>
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Run multiple tasks in parallel and wait for all results</span>
+  <span class="token-comment"># This is useful when an agent needs to gather data from multiple sources.</span>
+  #
+  <span class="token-comment"># Returns: list of results in the same order as the input tasks</span>
+  <span class="token-keyword">def</span> <span class="token-function">run_parallel</span>(agent_id, work_fns) <span class="token-keyword">do</span>
+    <span class="token-comment"># COMMON MISTAKE: Using Task.async_stream here instead.</span>
+    <span class="token-comment"># Task.async_stream is fine for simple cases, but async_nolink</span>
+    <span class="token-comment"># under a supervisor gives you crash isolation. If one task crashes,</span>
+    <span class="token-comment"># the others continue. async_stream may abort the entire batch.</span>
+
+    tasks = <span class="token-type">Enum</span>.<span class="token-function">map</span>(work_fns, <span class="token-keyword">fn</span> work_fn -&gt;
+      <span class="token-function">run_task</span>(agent_id, work_fn)
+    <span class="token-keyword">end</span>)
+
+    <span class="token-comment"># Wait for each task to complete, with a 30-second timeout</span>
+    <span class="token-comment"># DEEP DIVE: Why 30 seconds? Because agent tasks should be bounded.</span>
+    <span class="token-comment"># An unbounded task that runs forever is a resource leak.</span>
+    <span class="token-comment"># If a task needs more than 30 seconds, it should be redesigned</span>
+    <span class="token-comment"># as a multi-step workflow, not a single task.</span>
+    <span class="token-type">Enum</span>.<span class="token-function">map</span>(tasks, <span class="token-keyword">fn</span> task -&gt;
+      receive <span class="token-keyword">do</span>
+        {^task, result} -&gt;
+          result
+        {<span class="token-atom">:DOWN</span>, _ref, <span class="token-atom">:process</span>, _pid, reason} -&gt;
+          {<span class="token-atom">:error</span>, <span class="token-string">"Task crashed: #{inspect(reason)}"</span>}
+      <span class="token-keyword">after</span>
+        <span class="token-number">30_000</span> -&gt;
+          {<span class="token-atom">:error</span>, <span class="token-string">"Task timed out after 30 seconds"</span>}
+      <span class="token-keyword">end</span>
+    <span class="token-keyword">end</span>)
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="using-tasksupervisor" class="content-subtitle fade-in">Using Task.Supervisor</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start the task pool</span>
+{<span class="token-atom">:ok</span>, _pid} = <span class="token-type">TaskPool</span>.<span class="token-function">start_link</span>()
+
+<span class="token-comment"># Spawn a supervised task</span>
+{<span class="token-atom">:ok</span>, task_ref} = <span class="token-type">TaskPool</span>.<span class="token-function">run_task</span>(<span class="token-string">"agent-1"</span>, <span class="token-keyword">fn</span> -&gt;
+  <span class="token-comment"># Simulate some heavy computation</span>
+  <span class="token-atom">:timer</span>.<span class="token-function">sleep</span>(<span class="token-number">1_000</span>)
+  %{analysis: <span class="token-string">"Market is bullish"</span>, confidence: <span class="token-number">0.87</span>}
+<span class="token-keyword">end</span>)
+
+<span class="token-comment"># The agent can do other work while the task runs</span>
+<span class="token-comment"># ...</span>
+
+<span class="token-comment"># When ready, collect the result</span>
+receive <span class="token-keyword">do</span>
+  {^task_ref, {<span class="token-atom">:success</span>, result}} -&gt;
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Task completed: #{inspect(result)}"</span>)
+  {^task_ref, {<span class="token-atom">:error</span>, reason}} -&gt;
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Task failed: #{reason}"</span>)
+<span class="token-keyword">after</span>
+  <span class="token-number">30_000</span> -&gt;
+    <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"Task timed out"</span>)
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-3-genstage--producer-consumer-with-backpressure" class="section-title fade-in">Pattern 3: GenStage — Producer-Consumer with Backpressure</h2>
+
+<h3 id="what-is-backpressure" class="content-subtitle fade-in">What Is Backpressure?</h3>
+
+<p class="fade-in">Imagine a fire hose connected to a small bucket. Water comes in faster than the bucket can hold it. What happens? Water overflows and makes a mess.</p>
+
+<p class="fade-in">This is exactly what happens in software when a fast producer sends events to a slow consumer. Events pile up in memory, the process runs out of memory, and the BEAM kills it.</p>
+
+<p class="fade-in"><strong>Backpressure</strong> is the mechanism where the consumer tells the producer "slow down, I can't handle more right now." The producer stops producing until the consumer signals it's ready for more.</p>
+
+<h3 id="how-genstage-works" class="content-subtitle fade-in">How GenStage Works</h3>
+
+<p class="fade-in">GenStage builds producer-consumer pipelines. Each stage in the pipeline is a GenStage process:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Producer → Consumer → Consumer → Consumer</code></pre></div>
+</div>
+
+<p class="fade-in">The producer generates events. Consumers demand events from the producer. The producer only sends as many events as consumers have demanded. This is automatic backpressure.</p>
+
+<p class="fade-in">Think of it like a restaurant. The kitchen (producer) can only send plates to the waiter (consumer) when the waiter asks for them. If the waiter is busy with other tables, the kitchen holds the plates. No plates pile up on the counter.</p>
+
+<h3 id="implementing-a-genstage-producer" class="content-subtitle fade-in">Implementing a GenStage Producer</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">EventProducer</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A GenStage producer that generates sensor events.
+
+  In a real system, this might read from a Kafka topic, a file,
+  or an HTTP stream. Here we simulate it with a timer.
+
+  The producer generates events on demand — it only produces
+  as many events as consumers have requested. This is backpressure.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenStage</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts \\ []) <span class="token-keyword">do</span>
+    <span class="token-type">GenStage</span>.<span class="token-function">start_link</span>(__MODULE__, opts, name: __MODULE__)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># State holds:</span>
+    <span class="token-comment"># - counter: monotonically increasing event ID</span>
+    <span class="token-comment"># - demand: how many events consumers have requested</span>
+    <span class="token-comment"># - interval: milliseconds between event batches</span>
+    state = %{
+      counter: <span class="token-number">0</span>,
+      demand: <span class="token-number">0</span>,
+      interval: <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:interval</span>, <span class="token-number">100</span>)
+    }
+
+    <span class="token-comment"># Schedule the first event generation</span>
+    <span class="token-comment"># DEEP DIVE: Why use :timer.send_interval instead of Process.send_after?</span>
+    <span class="token-comment"># send_interval automatically repeats. send_after only fires once.</span>
+    <span class="token-comment"># We want continuous event generation, so send_interval is correct.</span>
+    <span class="token-atom">:timer</span>.<span class="token-function">send_interval</span>(state.interval, <span class="token-atom">:generate</span>)
+
+    {<span class="token-atom">:producer</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Handle demand from consumers.</span>
+  <span class="token-comment"># This is the core of backpressure — we track how many events</span>
+  <span class="token-comment"># consumers want, and only produce that many.</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_demand</span>(incoming_demand, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Accumulate demand. Consumers may demand more than we have ready.</span>
+    <span class="token-comment"># We store it and produce events as they become available.</span>
+    new_demand = state.demand + incoming_demand
+
+    <span class="token-comment"># Try to satisfy demand immediately if we have pending events</span>
+    {events, new_state} = <span class="token-function">produce_events</span>(new_demand, %{state | demand: new_demand})
+
+    {<span class="token-atom">:noreply</span>, events, new_state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Handle periodic event generation</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_info</span>(<span class="token-atom">:generate</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Only produce if there is demand</span>
+    <span class="token-comment"># COMMON MISTAKE: Producing events without checking demand.</span>
+    <span class="token-comment"># This defeats the purpose of backpressure and can cause</span>
+    <span class="token-comment"># memory issues if consumers are slow.</span>
+    <span class="token-keyword">if</span> state.demand &gt; <span class="token-number">0</span> <span class="token-keyword">do</span>
+      {events, new_state} = <span class="token-function">produce_events</span>(<span class="token-number">1</span>, state)
+      {<span class="token-atom">:noreply</span>, events, new_state}
+    <span class="token-keyword">else</span>
+      <span class="token-comment"># No demand right now — wait for consumers to ask</span>
+      {<span class="token-atom">:noreply</span>, [], state}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Produce events up to the demand limit</span>
+  <span class="token-comment"># Returns: {list_of_events, updated_state}</span>
+  <span class="token-keyword">defp</span> <span class="token-function">produce_events</span>(<span class="token-number">0</span>, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># No demand left — return empty list</span>
+    {[], state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> <span class="token-function">produce_events</span>(remaining_demand, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Generate one event</span>
+    event = %{
+      id: state.counter + <span class="token-number">1</span>,
+      timestamp: <span class="token-type">System</span>.<span class="token-function">system_time</span>(<span class="token-atom">:millisecond</span>),
+      sensor_id: <span class="token-string">"sensor-#{rem(state.counter, 5) + 1}"</span>,
+      value: <span class="token-atom">:rand</span>.<span class="token-function">uniform</span>() * <span class="token-number">100</span>
+    }
+
+    <span class="token-comment"># DEEP DIVE: We only produce ONE event per call.</span>
+    <span class="token-comment"># This is deliberate. Producing one event at a time lets us</span>
+    <span class="token-comment"># interleave with other messages (like demand updates from consumers).</span>
+    <span class="token-comment"># If we produced all events at once, we'd block the process mailbox.</span>
+
+    new_state = %{state |
+      counter: state.counter + <span class="token-number">1</span>,
+      demand: state.demand - <span class="token-number">1</span>
+    }
+
+    {[event], new_state}
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="implementing-a-genstage-consumer" class="content-subtitle fade-in">Implementing a GenStage Consumer</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">EventConsumer</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A GenStage consumer that processes sensor events.
+
+  Each consumer subscribes to a producer (or another consumer
+  in a pipeline). It receives events and processes them.
+
+  The consumer controls the flow: it only asks for events
+  when it's ready to process them. This is how backpressure
+  propagates back to the producer.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">GenStage</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-type">GenStage</span>.<span class="token-function">start_link</span>(__MODULE__, opts)
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">init</span>(opts) <span class="token-keyword">do</span>
+    <span class="token-comment"># Subscribe to the producer when we start</span>
+    <span class="token-comment"># DEEP DIVE: subscribe_to starts a demand-based subscription.</span>
+    <span class="token-comment"># The consumer will demand events from the producer.</span>
+    <span class="token-comment"># max_demand defaults to 1000, min_demand to 500.</span>
+    <span class="token-comment"># This means: ask for 1000 events, when 500 are processed, ask for 500 more.</span>
+    <span class="token-comment"># This keeps a buffer of events flowing, preventing stalls.</span>
+
+    producer = <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:producer</span>, <span class="token-type">EventProducer</span>)
+
+    <span class="token-comment"># COMMON MISTAKE: Forgetting to subscribe.</span>
+    <span class="token-comment"># Without a subscription, the consumer never receives events.</span>
+    <span class="token-comment"># It sits idle forever, wondering why nothing is happening.</span>
+    <span class="token-type">GenStage</span>.<span class="token-function">sync_subscribe</span>(<span class="token-keyword">self</span>(), to: producer, max_demand: <span class="token-number">10</span>, min_demand: <span class="token-number">5</span>)
+
+    state = %{
+      processed: <span class="token-number">0</span>,
+      errors: <span class="token-number">0</span>,
+      name: <span class="token-type">Keyword</span>.<span class="token-function">get</span>(opts, <span class="token-atom">:name</span>, <span class="token-string">"consumer-#{System.unique_integer([:positive])}"</span>)
+    }
+
+    {<span class="token-atom">:consumer</span>, state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Handle events from the producer</span>
+  <span class="token-comment"># This is where the actual work happens.</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_events</span>(events, _from, state) <span class="token-keyword">do</span>
+    <span class="token-comment"># Process each event</span>
+    results = <span class="token-type">Enum</span>.<span class="token-function">map</span>(events, <span class="token-keyword">fn</span> event -&gt;
+      <span class="token-keyword">case</span> <span class="token-function">process_event</span>(event) <span class="token-keyword">do</span>
+        <span class="token-atom">:ok</span> -&gt;
+          <span class="token-atom">:ok</span>
+        {<span class="token-atom">:error</span>, reason} -&gt;
+          <span class="token-comment"># COMMON MISTAKE: Crashing on a bad event.</span>
+          <span class="token-comment"># One bad event should not kill the consumer.</span>
+          <span class="token-comment"># Log the error and continue processing.</span>
+          <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[#{state.name}] Error processing event #{event.id}: #{reason}"</span>)
+          {<span class="token-atom">:error</span>, reason}
+      <span class="token-keyword">end</span>
+    <span class="token-keyword">end</span>)
+
+    <span class="token-comment"># Count successes and errors</span>
+    successes = <span class="token-type">Enum</span>.<span class="token-function">count</span>(results, &amp;(&amp;<span class="token-number">1</span> == <span class="token-atom">:ok</span>))
+    errors = <span class="token-type">Enum</span>.<span class="token-function">count</span>(results, &amp;match?({<span class="token-atom">:error</span>, _}, &amp;<span class="token-number">1</span>))
+
+    new_state = %{state |
+      processed: state.processed + successes,
+      errors: state.errors + errors
+    }
+
+    <span class="token-comment"># Return :ok to acknowledge all events were processed.</span>
+    <span class="token-comment"># The producer will now send more events based on demand.</span>
+    {<span class="token-atom">:noreply</span>, [], new_state}
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Process a single event</span>
+  <span class="token-comment"># Returns :ok or {:error, reason}</span>
+  <span class="token-keyword">defp</span> <span class="token-function">process_event</span>(event) <span class="token-keyword">do</span>
+    <span class="token-comment"># Simulate processing time (1-5ms)</span>
+    <span class="token-comment"># DEEP DIVE: In production, this would be the actual work:</span>
+    <span class="token-comment"># parsing, validation, database writes, API calls, etc.</span>
+    <span class="token-comment"># The processing time determines how fast the pipeline runs.</span>
+    <span class="token-comment"># A slow process_event means demand accumulates and backpressure</span>
+    <span class="token-comment"># slows down the producer.</span>
+    processing_time = <span class="token-atom">:rand</span>.<span class="token-function">uniform</span>(<span class="token-number">5</span>)
+    <span class="token-atom">:timer</span>.<span class="token-function">sleep</span>(processing_time)
+
+    <span class="token-comment"># Simulate occasional errors (5% failure rate)</span>
+    <span class="token-keyword">if</span> <span class="token-atom">:rand</span>.<span class="token-function">uniform</span>() &lt; <span class="token-number">0.05</span> <span class="token-keyword">do</span>
+      {<span class="token-atom">:error</span>, <span class="token-string">"Sensor value out of range"</span>}
+    <span class="token-keyword">else</span>
+      <span class="token-atom">:ok</span>
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="running-the-pipeline" class="content-subtitle fade-in">Running the Pipeline</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start the producer</span>
+{<span class="token-atom">:ok</span>, _} = <span class="token-type">EventProducer</span>.<span class="token-function">start_link</span>(interval: <span class="token-number">50</span>)
+
+<span class="token-comment"># Start 3 consumers (parallel processing)</span>
+consumers = for i &lt;- <span class="token-number">1</span>..<span class="token-number">3</span> <span class="token-keyword">do</span>
+  {<span class="token-atom">:ok</span>, pid} = <span class="token-type">EventConsumer</span>.<span class="token-function">start_link</span>(
+    name: <span class="token-string">"consumer-#{i}"</span>,
+    producer: <span class="token-type">EventProducer</span>
+  )
+  pid
+<span class="token-keyword">end</span>
+
+<span class="token-comment"># Let it run for a few seconds</span>
+<span class="token-atom">:timer</span>.<span class="token-function">sleep</span>(<span class="token-number">5_000</span>)
+
+<span class="token-comment"># Check the results</span>
+<span class="token-comment"># Each consumer will have processed hundreds of events</span>
+<span class="token-comment"># but none will have crashed, even with the 5% error rate.</span>
+<span class="token-comment"># This is the power of backpressure — the producer never</span>
+<span class="token-comment"># overwhelms the consumers.</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-4-broadway--high-level-data-pipeline" class="section-title fade-in">Pattern 4: Broadway — High-Level Data Pipeline</h2>
+
+<h3 id="why-broadway-exists" class="content-subtitle fade-in">Why Broadway Exists</h3>
+
+<p class="fade-in">GenStage gives you the building blocks, but wiring up a complete pipeline (producer → processors → batchers → sinks) requires a lot of boilerplate. Broadway is Dashbit's answer to this: a high-level API that makes data pipelines declarative.</p>
+
+<p class="fade-in">Think of it like this: GenStage is like writing assembly language. Broadway is like writing Python. Same underlying mechanics, but Broadway is much easier to use.</p>
+
+<h3 id="broadway-architecture" class="content-subtitle fade-in">Broadway Architecture</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Producer(s) → Processor(s) → Batcher(s) → Consumer(s)
+     ↑              ↑              ↑
+  (backpressure) (backpressure) (batch processing)</code></pre></div>
+</div>
+
+<ul class="fade-in">
+  <li><strong>Producers</strong>: Generate or receive events (Kafka, SQS, HTTP, GenStage)</li>
+  <li><strong>Processors</strong>: Transform and validate events (like middleware)</li>
+  <li><strong>Batchers</strong>: Group events for efficient bulk operations</li>
+  <li><strong>Consumers</strong>: Final step — write to database, send to API, etc.</li>
+</ul>
+
+<h3 id="building-a-broadway-pipeline" class="content-subtitle fade-in">Building a Broadway Pipeline</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">SensorPipeline</span> <span class="token-keyword">do</span>
+  @moduledoc <span class="token-string">""</span><span class="token-string">"
+  A Broadway pipeline for processing sensor data.
+
+  This pipeline:
+  1. Receives sensor events from a GenStage producer
+  2. Validates and enriches each event
+  3. Batches events by sensor_id for efficient database writes
+  4. Persists events to the database
+
+  Broadway handles backpressure, batching, and error handling.
+  You only write the business logic.
+  "</span><span class="token-string">""</span>
+
+  <span class="token-keyword">use</span> <span class="token-type">Broadway</span>
+
+  <span class="token-keyword">def</span> <span class="token-function">start_link</span>(_opts) <span class="token-keyword">do</span>
+    <span class="token-type">Broadway</span>.<span class="token-function">start_link</span>(__MODULE__,
+      name: __MODULE__,
+
+      <span class="token-comment"># Producers: where events come from</span>
+      <span class="token-comment"># DEEP DIVE: We use Broadway.Producer.GenStage because we have</span>
+      <span class="token-comment"># our own GenStage producer. Broadway also supports Kafka, SQS,</span>
+      <span class="token-comment"># and custom producers out of the box.</span>
+      producer: [
+        module: {<span class="token-type">EventProducer</span>, interval: <span class="token-number">50</span>},
+        <span class="token-comment"># concurrency: how many producer processes to run</span>
+        <span class="token-comment"># For GenStage, 1 is typical. For Kafka, you'd set this</span>
+        <span class="token-comment"># to the number of partitions.</span>
+        concurrency: <span class="token-number">1</span>
+      ],
+
+      <span class="token-comment"># Processors: transform events one at a time</span>
+      <span class="token-comment"># concurrency: how many processor processes to run</span>
+      <span class="token-comment"># More processors = more parallel processing</span>
+      processors: [
+        default: [
+          concurrency: <span class="token-number">4</span>,
+          <span class="token-comment"># max_demand: how many events each processor asks for</span>
+          <span class="token-comment"># This controls backpressure sensitivity</span>
+          max_demand: <span class="token-number">10</span>,
+          min_demand: <span class="token-number">5</span>
+        ]
+      ],
+
+      <span class="token-comment"># Batchers: group events for bulk operations</span>
+      <span class="token-comment"># BATCH BY sensor_id — events from the same sensor go in the same batch</span>
+      batchers: [
+        sensor: [
+          <span class="token-comment"># Batch size: collect 50 events before flushing</span>
+          <span class="token-comment"># Why 50? Because database bulk inserts are most efficient</span>
+          <span class="token-comment"># with 50-100 rows. Too small = many round trips.</span>
+          <span class="token-comment"># Too large = long batch processing time.</span>
+          batch_size: <span class="token-number">50</span>,
+          <span class="token-comment"># Batch timeout: if 50 events don't arrive in 2 seconds,</span>
+          <span class="token-comment"># flush whatever we have. Prevents events from sitting</span>
+          <span class="token-comment"># in the batcher forever during low-traffic periods.</span>
+          batch_timeout: <span class="token-number">2_000</span>
+        ]
+      ]
+    )
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># Processors: transform events</span>
+  <span class="token-comment"># ---</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handle a single event from the producer.
+
+  This function receives one event at a time and must return
+  a list of events (possibly empty, possibly more than one).
+
+  Return [] to drop an event. Return [event] to pass it through.
+  Return [enriched_event] to transform it. Return [e1, e2] to split.
+  "</span><span class="token-string">""</span>
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_message</span>(_processor, message, _context) <span class="token-keyword">do</span>
+    <span class="token-comment"># Validate the event</span>
+    <span class="token-comment"># COMMON MISTAKE: Not validating events in handle_message.</span>
+    <span class="token-comment"># If you pass invalid events to batchers, the batch consumer</span>
+    <span class="token-comment"># will crash on the entire batch, not just the bad event.</span>
+    <span class="token-comment"># Validate early, fail fast.</span>
+    <span class="token-keyword">case</span> <span class="token-function">validate_event</span>(message.data) <span class="token-keyword">do</span>
+      <span class="token-atom">:ok</span> -&gt;
+        <span class="token-comment"># Enrich the event with additional data</span>
+        enriched = <span class="token-function">enrich_event</span>(message.data)
+
+        <span class="token-comment"># Return the message with enriched data</span>
+        <span class="token-comment"># Broadway.message/2 updates the message data</span>
+        %{message | data: enriched}
+
+      {<span class="token-atom">:error</span>, reason} -&gt;
+        <span class="token-comment"># Mark the message as failed</span>
+        <span class="token-comment"># Broadway will handle retries according to your configuration</span>
+        <span class="token-type">Broadway.Message</span>.<span class="token-function">failed</span>(message, reason)
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Validate a sensor event</span>
+  <span class="token-comment"># Returns :ok or {:error, reason}</span>
+  <span class="token-keyword">defp</span> <span class="token-function">validate_event</span>(event) <span class="token-keyword">do</span>
+    <span class="token-keyword">cond</span> <span class="token-keyword">do</span>
+      <span class="token-comment"># Sensor ID must be present and non-empty</span>
+      <span class="token-function">is_nil</span>(event[<span class="token-atom">:sensor_id</span>]) <span class="token-keyword">or</span> event[<span class="token-atom">:sensor_id</span>] == <span class="token-string">""</span> -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-string">"missing sensor_id"</span>}
+
+      <span class="token-comment"># Value must be a number</span>
+      <span class="token-keyword">not</span> <span class="token-function">is_number</span>(event[<span class="token-atom">:value</span>]) -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-string">"value must be a number"</span>}
+
+      <span class="token-comment"># Value must be within valid range (0-100 for temperature sensors)</span>
+      event[<span class="token-atom">:value</span>] &lt; <span class="token-number">0</span> <span class="token-keyword">or</span> event[<span class="token-atom">:value</span>] &gt; <span class="token-number">100</span> -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-string">"value out of range: #{event[:value]}"</span>}
+
+      <span class="token-comment"># All checks passed</span>
+      <span class="token-keyword">true</span> -&gt;
+        <span class="token-atom">:ok</span>
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Enrich a sensor event with metadata</span>
+  <span class="token-comment"># Returns the enriched event</span>
+  <span class="token-keyword">defp</span> <span class="token-function">enrich_event</span>(event) <span class="token-keyword">do</span>
+    <span class="token-type">Map</span>.<span class="token-function">merge</span>(event, %{
+      <span class="token-comment"># Add processing timestamp</span>
+      processed_at: <span class="token-type">DateTime</span>.<span class="token-function">utc_now</span>(),
+
+      <span class="token-comment"># Add a quality score based on the value</span>
+      <span class="token-comment"># DEEP DIVE: Quality scoring helps downstream systems</span>
+      <span class="token-comment"># prioritize high-confidence data over uncertain data.</span>
+      quality_score: <span class="token-function">calculate_quality</span>(event.value),
+
+      <span class="token-comment"># Add the sensor's location (in production, this would</span>
+      <span class="token-comment"># come from a sensor registry lookup)</span>
+      location: <span class="token-string">"warehouse-#{rem(event.sensor_id |&gt; String.replace("</span>sensor-<span class="token-string">", "</span><span class="token-string">") |&gt; String.to_integer(), 3) + 1}"</span>
+    })
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Calculate a quality score for the sensor reading</span>
+  <span class="token-comment"># Returns a float between 0.0 and 1.0</span>
+  <span class="token-keyword">defp</span> <span class="token-function">calculate_quality</span>(value) <span class="token-keyword">do</span>
+    <span class="token-comment"># Values closer to the middle of the range (50) are more trustworthy</span>
+    <span class="token-comment"># Extreme values (near 0 or 100) are more likely to be outliers</span>
+    <span class="token-number">1.0</span> - <span class="token-function">abs</span>(value - <span class="token-number">50</span>) / <span class="token-number">50</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># ---</span>
+  <span class="token-comment"># Batchers: process groups of events</span>
+  <span class="token-comment"># ---</span>
+
+  @doc <span class="token-string">""</span><span class="token-string">"
+  Handle a batch of events.
+
+  Broadway calls this function when:
+  - The batch reaches batch_size events, OR
+  - The batch_timeout expires with at least 1 event
+
+  All events in the batch have the same batch_key (sensor_id in our case).
+  "</span><span class="token-string">""</span>
+  @impl <span class="token-keyword">true</span>
+  <span class="token-keyword">def</span> <span class="token-function">handle_batch</span>(<span class="token-atom">:sensor</span>, messages, _batch_info, _context) <span class="token-keyword">do</span>
+    <span class="token-comment"># DEEP DIVE: Why batch by sensor_id?</span>
+    <span class="token-comment"># Because database writes for the same sensor can be optimized:</span>
+    <span class="token-comment"># - Single row lock per sensor</span>
+    <span class="token-comment"># - Batch INSERT with multiple VALUES</span>
+    <span class="token-comment"># - Reduced index fragmentation</span>
+
+    <span class="token-comment"># Convert messages to a list of event maps</span>
+    events = <span class="token-type">Enum</span>.<span class="token-function">map</span>(messages, &amp; &amp;<span class="token-number">1.</span>data)
+
+    <span class="token-comment"># Group by sensor_id for efficient bulk insert</span>
+    grouped = <span class="token-type">Enum</span>.<span class="token-function">group_by</span>(events, &amp; &amp;<span class="token-number">1.</span>sensor_id)
+
+    <span class="token-comment"># Insert each group as a batch</span>
+    <span class="token-type">Enum</span>.<span class="token-function">each</span>(grouped, <span class="token-keyword">fn</span> {sensor_id, sensor_events} -&gt;
+      <span class="token-keyword">case</span> <span class="token-function">insert_batch</span>(sensor_id, sensor_events) <span class="token-keyword">do</span>
+        {<span class="token-atom">:ok</span>, count} -&gt;
+          <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[SensorPipeline] Inserted #{count} events for #{sensor_id}"</span>)
+
+        {<span class="token-atom">:error</span>, reason} -&gt;
+          <span class="token-comment"># COMMON MISTAKE: Crashing the batch consumer on a single bad batch.</span>
+          <span class="token-comment"># If one sensor's batch fails, other sensors' batches should still</span>
+          <span class="token-comment"># be processed. Log the error and continue.</span>
+          <span class="token-type">IO</span>.<span class="token-function">puts</span>(<span class="token-string">"[SensorPipeline] Failed to insert batch for #{sensor_id}: #{reason}"</span>)
+      <span class="token-keyword">end</span>
+    <span class="token-keyword">end</span>)
+
+    <span class="token-comment"># Return the messages — Broadway tracks their lifecycle</span>
+    messages
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Insert a batch of events into the database</span>
+  <span class="token-comment"># Returns {:ok, count} or {:error, reason}</span>
+  #
+  <span class="token-comment"># In production, this would use Ecto's bulk_insert or</span>
+  <span class="token-comment"># a PostgreSQL COPY command for maximum performance.</span>
+  <span class="token-keyword">defp</span> <span class="token-function">insert_batch</span>(sensor_id, events) <span class="token-keyword">do</span>
+    <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+      <span class="token-comment"># Simulate database write (10-50ms depending on batch size)</span>
+      <span class="token-comment"># DEEP DIVE: In production, you'd use:</span>
+      <span class="token-comment">#   Repo.insert_all(SensorEvent, events)</span>
+      <span class="token-comment"># or for PostgreSQL-specific optimization:</span>
+      <span class="token-comment">#   Postgrex.query(conn, "COPY sensor_events (...) FROM STDIN", events)</span>
+      processing_time = <span class="token-number">10</span> + <span class="token-function">length</span>(events)
+      <span class="token-atom">:timer</span>.<span class="token-function">sleep</span>(processing_time)
+
+      <span class="token-comment"># COMMON MISTAKE: Not returning the count.</span>
+      <span class="token-comment"># Broadway expects this function to return messages,</span>
+      <span class="token-comment"># but your logging should include the count for debugging.</span>
+      {<span class="token-atom">:ok</span>, <span class="token-function">length</span>(events)}
+    <span class="token-keyword">rescue</span>
+      e -&gt;
+        {<span class="token-atom">:error</span>, <span class="token-type">Exception</span>.<span class="token-function">message</span>(e)}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<h3 id="running-the-broadway-pipeline" class="content-subtitle fade-in">Running the Broadway Pipeline</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Start the Broadway pipeline</span>
+<span class="token-comment"># This starts the producer, processors, and batchers</span>
+{<span class="token-atom">:ok</span>, _pid} = <span class="token-type">SensorPipeline</span>.<span class="token-function">start_link</span>([])
+
+<span class="token-comment"># The pipeline is now running.</span>
+<span class="token-comment"># Events flow: EventProducer → SensorPipeline processors → batcher → handle_batch</span>
+#
+<span class="token-comment"># Backpressure is automatic:</span>
+<span class="token-comment"># - If handle_batch is slow, processors slow down</span>
+<span class="token-comment"># - If processors are slow, the producer slows down</span>
+<span class="token-comment"># - If the producer can't slow down (external source), events queue</span>
+<span class="token-comment">#   in the producer's buffer until memory pressure triggers flow control</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="how-these-patterns-fit-together" class="section-title fade-in">How These Patterns Fit Together</h2>
+
+<p class="fade-in">In a production agentic platform, you might combine all four patterns:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Task.Supervisor (spawn async agent tasks)
+    ↓
+GenStage Producer (receive events from agents)
+    ↓
+GenStage Consumer (validate and transform events)
+    ↓
+Broadway Pipeline (batch and persist to database)
+    ↓
+:gen_statem (agent lifecycle management)</code></pre></div>
+</div>
+
+<p class="fade-in">The agent itself is a <code>:gen_statem</code> — it has clear lifecycle states. It spawns tasks under <code>Task.Supervisor</code> for parallel work. Results flow through a <code>GenStage</code> pipeline with backpressure. And <code>Broadway</code> handles the final persistence step.</p>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong><code>:gen_statem</code></strong> is for agents with complex lifecycle states. Use it when GenServer's flat state model is too simple.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong><code>Task.Supervisor</code></strong> is for supervised async work. Always use <code>async_nolink</code> under a supervisor — never bare <code>Task.start_link</code>.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong><code>GenStage</code></strong> gives you backpressure for free. Producer-consumer pipelines that never overwhelm slow consumers.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong><code>Broadway</code></strong> is GenStage without the boilerplate. Use it for data pipelines (Kafka, SQS, HTTP streams).</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Backpressure</strong> is the key insight: consumers control the flow rate. This prevents memory overflows and crashes.</li>
+</ol>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">In Module 10, you'll learn how to run Elixir across multiple machines. Clustering and distribution let your agent platform scale beyond a single server — essential for production deployments.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="08-agent-state-durable.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Agent State & Durable Workflows</a>
+        <a href="10-clustering-distribution.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Clustering & Distribution →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

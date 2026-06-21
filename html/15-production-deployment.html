@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Deployment — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link active" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 15</div>
+        <h1 class="article-title">Production Deployment</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 15
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Docker, K8s, Helm, Terraform
+          </span>
+          <span class="article-meta-item lang-both" style="font-weight:600;color:var(--accent-emerald)">
+            Both
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-15-production-deployment-week-15" class="article-title fade-in">Module 15: Production Deployment (Week 15)</h1>
+
+<h2 id="what-youll-learn-this-module" class="section-title fade-in">What You'll Learn This Module</h2>
+
+<p class="fade-in">By the end of this module, you'll understand how to deploy a hybrid Elixir/Go platform to production:</p>
+
+<ol class="fade-in">
+  <li><strong>Docker multi-stage builds</strong> — create minimal, secure container images</li>
+  <li><strong>Kubernetes manifests</strong> — deployments, services, configmaps, probes</li>
+  <li><strong>Helm charts</strong> — template-based K8s configuration with value overrides</li>
+  <li><strong>ConfigMaps and Secrets</strong> — externalize configuration from container images</li>
+  <li><strong>Health probes</strong> — liveness, readiness, and startup probes for K8s</li>
+  <li><strong>Terraform</strong> — provision cloud infrastructure as code</li>
+</ol>
+
+<p class="fade-in">Production deployment is where software meets reality. Your code works on your laptop. But can it survive a rolling update? Can it recover from a node failure? Can a new developer deploy it with one command?</p>
+
+<hr class="fade-in">
+
+<h2 id="the-problem-dev--production" class="section-title fade-in">The Problem: Dev ≠ Production</h2>
+
+<p class="fade-in">In development, you run <code>mix phx.server</code> and <code>go run main.go</code>. In production, you need:</p>
+
+<ol class="fade-in">
+  <li><strong>Containers</strong> — consistent runtime environment across machines</li>
+  <li><strong>Orchestration</strong> — automatic restarts, scaling, load balancing</li>
+  <li><strong>Configuration</strong> — secrets and config outside the container image</li>
+  <li><strong>Health checks</strong> — K8s knows when your app is ready to receive traffic</li>
+  <li><strong>Infrastructure</strong> — cloud accounts, networks, DNS, certificates</li>
+</ol>
+
+<p class="fade-in">This module builds each layer, from Docker to Terraform.</p>
+
+<hr class="fade-in">
+
+<h2 id="the-big-picture-deployment-stack" class="section-title fade-in">The Big Picture: Deployment Stack</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>┌─────────────────────────────────────────────────────────┐
+│                    Terraform                             │
+│  Provisions: VPC, subnets, EKS cluster, RDS, ElastiCache│
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│                    Helm Chart                            │
+│  Templates: Deployment, Service, ConfigMap, Ingress      │
+│  Values: replicas, resources, image tags                 │
+└──────────────────────────┬──────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────┐
+│                  Kubernetes                              │
+│  ┌──────────────────┐  ┌──────────────────┐             │
+│  │ Elixir Pod (x3)  │  │ Go Gateway Pod (x2)│           │
+│  │ Phoenix + Oban   │  │ gRPC + Prometheus  │           │
+│  └──────────────────┘  └──────────────────┘             │
+│  ┌──────────────────┐  ┌──────────────────┐             │
+│  │ PostgreSQL (RDS) │  │ Redis (ElastiCache)│           │
+│  └──────────────────┘  └──────────────────┘             │
+└─────────────────────────────────────────────────────────┘</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-1-docker-multi-stage-builds" class="section-title fade-in">Pattern 1: Docker Multi-Stage Builds</h2>
+
+<h3 id="why-multi-stage" class="content-subtitle fade-in">Why Multi-Stage?</h3>
+
+<p class="fade-in">A Docker image with Go compiler, Elixir build tools, and all dev dependencies is 2GB+. A production image needs only the compiled binary and runtime. Multi-stage builds let you build in one stage and copy only the output to a minimal final stage.</p>
+
+<h3 id="elixir-dockerfile" class="content-subtitle fade-in">Elixir Dockerfile</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">dockerfile</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code># Dockerfile — Elixir Phoenix Application (multi-stage)
+#
+# Stage 1: Build — includes Elixir, Erlang, Node.js, hex, rebar
+# Stage 2: Runtime — includes only Erlang runtime and compiled app
+#
+# WHY: Final image is ~100MB instead of ~1.5GB. Smaller images = faster pulls,
+# less attack surface, faster deployments.
+
+# ============================================================
+# Stage 1: Build
+# ============================================================
+FROM hexpm/elixir:1.18.4-erlang-27.3.4-debian-bookworm-20240612 AS build
+
+# Install build dependencies
+# WHY: Debian slim images don't include build tools by default
+RUN apt-get update -y &amp;&amp; apt-get install -y build-essential git curl \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+# Set working directory for the build
+WORKDIR /app
+
+# Install hex and rebar — Elixir's package manager and build tool
+# WHY: These must be installed before mix deps.get
+RUN mix local.hex --force &amp;&amp; mix local.rebar --force
+
+# Copy mix files first — Docker layer caching
+# WHY: If mix.exs and mix.lock haven't changed, Docker reuses this layer.
+# Only source code changes trigger a full rebuild. This cuts build time from
+# 5 minutes to 30 seconds on small changes.
+COPY mix.exs mix.lock ./
+
+# Fetch dependencies
+RUN mix deps.get --only prod
+
+# Copy application source
+COPY config config
+COPY lib lib
+COPY priv priv
+COPY assets assets
+
+# Compile the application
+# COMMON MISTAKE: Forgetting MIX_ENV=prod — you'll get dev-mode code
+ENV MIX_ENV=prod
+RUN mix compile
+
+# Build assets (if using esbuild/tailwind)
+COPY assets/package.json assets/package-lock.json assets/
+RUN cd assets &amp;&amp; npm ci
+RUN mix assets.deploy
+
+# Create a release
+# WHY: Mix releases bundle the app, its dependencies, and the Erlang runtime
+# into a single directory. This is what we copy to the runtime stage.
+RUN mix release
+
+# ============================================================
+# Stage 2: Runtime
+# ============================================================
+FROM debian:bookworm-slim AS runtime
+
+# Install runtime dependencies only
+# WHY: No compilers, no build tools, no git. Just the libraries the
+# compiled BEAM needs at runtime.
+RUN apt-get update -y &amp;&amp; apt-get install -y libstdc++6 openssl libncurses5 locales \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+# Set the locale — BEAM requires it
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen &amp;&amp; locale-gen
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# Create a non-root user
+# COMMON MISTAKE: Running as root — if the app is compromised, the attacker
+# has full container access. Always run as a non-root user.
+RUN useradd --create-home app
+WORKDIR /home/app
+
+# Copy the release from the build stage
+# WHY: We only copy the _build directory — not source code, not compilers,
+# not node_modules. This is the smallest possible deployment artifact.
+COPY --from=build --chown=app:app /app/_build/prod/rel/agentic_platform ./
+
+# Switch to non-root user
+USER app
+
+# Expose the Phoenix port
+EXPOSE 4000
+
+# Health check — K8s uses this to determine if the pod is ready
+# WHY: Without a health check, K8s might route traffic to a pod that's
+# still starting up. The probe ensures the app is fully initialized.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:4000/healthz || exit 1
+
+# Start the application
+# WHY: Use exec form (not shell form) so BEAM gets PID 1 and handles
+# signals correctly. Without exec, Docker's shell process gets PID 1
+# and BEAM doesn't receive SIGTERM on shutdown.
+CMD ["bin/agentic_platform", "start"]</code></pre></div>
+</div>
+
+<h3 id="go-dockerfile" class="content-subtitle fade-in">Go Dockerfile</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">dockerfile</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code># Dockerfile — Go AgentBridge Gateway (multi-stage)
+#
+# Stage 1: Build — includes Go compiler
+# Stage 2: Runtime — scratch or distroless image
+
+# ============================================================
+# Stage 1: Build
+# ============================================================
+FROM golang:1.26-bookworm AS build
+
+WORKDIR /app
+
+# Copy go.mod and go.sum first — Docker layer caching
+# WHY: Same layer caching strategy as Elixir. Dependencies change
+# less often than source code.
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY proto/ proto/
+
+# Build the binary
+# WHY: CGO_ENABLED=0 creates a static binary — no C library dependencies.
+# This is critical for the next stage (scratch image).
+# COMMON MISTAKE: Forgetting CGO_ENABLED=0 — the binary will fail to run
+# in a scratch container because it can't find libc.
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bridge-server ./cmd/bridge-server
+
+# ============================================================
+# Stage 2: Runtime
+# ============================================================
+# Scratch is an empty image — the smallest possible container
+# WHY: Our Go binary is statically linked. It needs nothing else.
+# No shell, no utilities, no attack surface.
+FROM scratch
+
+# Copy the binary from the build stage
+COPY --from=build /app/bridge-server /bridge-server
+
+# Copy CA certificates for TLS connections
+# WHY: Without these, the binary can't make HTTPS requests to external services.
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+EXPOSE 50051 8080
+
+# Health check endpoint
+# COMMON MISTAKE: Using scratch means no curl for HEALTHCHECK.
+# K8s uses a different mechanism (HTTP GET probe) — this is just Docker-level.
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD ["/bridge-server", "--healthcheck"] || exit 1
+
+ENTRYPOINT ["/bridge-server"]</code></pre></div>
+</div>
+
+<h3 id="building-and-testing" class="content-subtitle fade-in">Building and Testing</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Build the Elixir image</span>
+docker build -t agentic-platform:latest -f Dockerfile.elixir .
+
+<span class="token-comment"># Build the Go image</span>
+docker build -t agentic-gateway:latest -f Dockerfile.go .
+
+<span class="token-comment"># Test the Elixir image</span>
+docker run --rm -p 4000:4000 \
+  -e DATABASE_URL=<span class="token-string">"ecto://postgres:postgres@host.docker.internal/agentic_platform"</span> \
+  -e REDIS_URL=<span class="token-string">"redis://host.docker.internal:6379"</span> \
+  agentic-platform:latest
+
+<span class="token-comment"># Test the Go image</span>
+docker run --rm -p 50051:50051 -p 8080:8080 agentic-gateway:latest</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-2-kubernetes-manifests" class="section-title fade-in">Pattern 2: Kubernetes Manifests</h2>
+
+<h3 id="deployment" class="content-subtitle fade-in">Deployment</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># k8s/deployment.yaml — Elixir deployment</span>
+<span class="token-comment"># WHY: Deployment manages replica sets. It ensures N pods are running</span>
+<span class="token-comment"># and handles rolling updates without downtime.</span>
+<span class="token-keyword">
+apiVersion:</span> apps/v1
+<span class="token-keyword">kind:</span> Deployment
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> agentic-platform
+<span class="token-keyword">  labels:</span>
+<span class="token-keyword">    app:</span> agentic-platform
+<span class="token-keyword">    component:</span> agent-brain
+<span class="token-keyword">spec:</span>
+  <span class="token-comment"># 3 replicas for high availability</span>
+  <span class="token-comment"># WHY: 3 replicas survive 1 node failure with no downtime.</span>
+  <span class="token-comment"># Pod anti-affinity ensures they're on different nodes.</span>
+<span class="token-keyword">  replicas:</span> 3
+
+  <span class="token-comment"># Rolling update strategy</span>
+<span class="token-keyword">  strategy:</span>
+<span class="token-keyword">    type:</span> RollingUpdate
+<span class="token-keyword">    rollingUpdate:</span>
+<span class="token-keyword">      maxSurge:</span> 1        <span class="token-comment"># allow 1 extra pod during update</span>
+<span class="token-keyword">      maxUnavailable:</span> 0   <span class="token-comment"># never reduce below 3 during update</span>
+      <span class="token-comment"># WHY: maxUnavailable: 0 ensures zero downtime. At worst,</span>
+      <span class="token-comment"># you briefly have 4 pods (3 old + 1 new).</span>
+<span class="token-keyword">
+  selector:</span>
+<span class="token-keyword">    matchLabels:</span>
+<span class="token-keyword">      app:</span> agentic-platform
+<span class="token-keyword">
+  template:</span>
+<span class="token-keyword">    metadata:</span>
+<span class="token-keyword">      labels:</span>
+<span class="token-keyword">        app:</span> agentic-platform
+<span class="token-keyword">        component:</span> agent-brain
+<span class="token-keyword">    spec:</span>
+      <span class="token-comment"># Pod anti-affinity — don't put all pods on the same node</span>
+      <span class="token-comment"># WHY: If one node dies, you lose at most 1 replica, not all 3.</span>
+<span class="token-keyword">      affinity:</span>
+<span class="token-keyword">        podAntiAffinity:</span>
+<span class="token-keyword">          preferredDuringSchedulingIgnoredDuringExecution:</span>
+            - weight: 100
+<span class="token-keyword">              podAffinityTerm:</span>
+<span class="token-keyword">                labelSelector:</span>
+<span class="token-keyword">                  matchLabels:</span>
+<span class="token-keyword">                    app:</span> agentic-platform
+<span class="token-keyword">                topologyKey:</span> kubernetes.io/hostname
+<span class="token-keyword">
+      containers:</span>
+        - name: agentic-platform
+<span class="token-keyword">          image:</span> agentic-platform:latest
+<span class="token-keyword">          ports:</span>
+            - containerPort: 4000
+<span class="token-keyword">              name:</span> http
+            - containerPort: 4364
+<span class="token-keyword">              name:</span> dist
+
+          <span class="token-comment"># Environment variables from ConfigMap</span>
+<span class="token-keyword">          envFrom:</span>
+            - configMapRef:
+<span class="token-keyword">                name:</span> agentic-platform-config
+
+          <span class="token-comment"># Secrets from K8s Secrets</span>
+          <span class="token-comment"># COMMON MISTAKE: Putting secrets in ConfigMaps — they're not encrypted.</span>
+          <span class="token-comment"># ConfigMaps are base64-encoded, not encrypted. Use Secrets for passwords.</span>
+<span class="token-keyword">          env:</span>
+            - name: DATABASE_URL
+<span class="token-keyword">              valueFrom:</span>
+<span class="token-keyword">                secretKeyRef:</span>
+<span class="token-keyword">                  name:</span> agentic-platform-secrets
+<span class="token-keyword">                  key:</span> database-url
+            - name: SECRET_KEY_BASE
+<span class="token-keyword">              valueFrom:</span>
+<span class="token-keyword">                secretKeyRef:</span>
+<span class="token-keyword">                  name:</span> agentic-platform-secrets
+<span class="token-keyword">                  key:</span> secret-key-base
+            - name: REDIS_URL
+<span class="token-keyword">              valueFrom:</span>
+<span class="token-keyword">                secretKeyRef:</span>
+<span class="token-keyword">                  name:</span> agentic-platform-secrets
+<span class="token-keyword">                  key:</span> redis-url
+
+          <span class="token-comment"># Resource limits — prevent one pod from consuming all node resources</span>
+          <span class="token-comment"># WHY: Without limits, a memory leak in one pod can OOM-kill other pods</span>
+          <span class="token-comment"># on the same node. Limits are your safety net.</span>
+<span class="token-keyword">          resources:</span>
+<span class="token-keyword">            requests:</span>
+<span class="token-keyword">              cpu:</span> <span class="token-string">"250m"</span>      <span class="token-comment"># 0.25 CPU cores</span>
+<span class="token-keyword">              memory:</span> <span class="token-string">"512Mi"</span>  <span class="token-comment"># 512 MB</span>
+<span class="token-keyword">            limits:</span>
+<span class="token-keyword">              cpu:</span> <span class="token-string">"1000m"</span>     <span class="token-comment"># 1 CPU core</span>
+<span class="token-keyword">              memory:</span> <span class="token-string">"1Gi"</span>    <span class="token-comment"># 1 GB</span>
+
+          <span class="token-comment"># Liveness probe — is the process alive?</span>
+          <span class="token-comment"># WHY: If the BEAM VM hangs (deadlock, infinite loop), K8s needs</span>
+          <span class="token-comment"># to know so it can restart the pod. Without liveness probes,</span>
+          <span class="token-comment"># a hung pod continues receiving traffic.</span>
+<span class="token-keyword">          livenessProbe:</span>
+<span class="token-keyword">            httpGet:</span>
+<span class="token-keyword">              path:</span> /healthz
+<span class="token-keyword">              port:</span> http
+<span class="token-keyword">            initialDelaySeconds:</span> 30
+<span class="token-keyword">            periodSeconds:</span> 10
+<span class="token-keyword">            timeoutSeconds:</span> 5
+<span class="token-keyword">            failureThreshold:</span> 3
+
+          <span class="token-comment"># Readiness probe — is the pod ready to receive traffic?</span>
+          <span class="token-comment"># WHY: During startup, the pod shouldn't receive traffic yet.</span>
+          <span class="token-comment"># Readiness tells K8s "I'm ready" only after the app is fully</span>
+          <span class="token-comment"># initialized (DB connected, telemetry started, etc.)</span>
+<span class="token-keyword">          readinessProbe:</span>
+<span class="token-keyword">            httpGet:</span>
+<span class="token-keyword">              path:</span> /healthz
+<span class="token-keyword">              port:</span> http
+<span class="token-keyword">            initialDelaySeconds:</span> 10
+<span class="token-keyword">            periodSeconds:</span> 5
+<span class="token-keyword">            timeoutSeconds:</span> 3
+<span class="token-keyword">            failureThreshold:</span> 3
+
+          <span class="token-comment"># Startup probe — for slow-starting applications</span>
+          <span class="token-comment"># WHY: BEAM takes time to compile and start. Without a startup probe,</span>
+          <span class="token-comment"># the liveness probe might kill the pod before it's ready.</span>
+          <span class="token-comment"># K8s only checks liveness/readiness AFTER the startup probe succeeds.</span>
+<span class="token-keyword">          startupProbe:</span>
+<span class="token-keyword">            httpGet:</span>
+<span class="token-keyword">              path:</span> /healthz
+<span class="token-keyword">              port:</span> http
+<span class="token-keyword">            initialDelaySeconds:</span> 10
+<span class="token-keyword">            periodSeconds:</span> 5
+<span class="token-keyword">            failureThreshold:</span> 30  <span class="token-comment"># 30 * 5s = 150s max startup time</span>
+
+      <span class="token-comment"># Termination grace period — time to finish in-flight requests</span>
+      <span class="token-comment"># WHY: When K8s decides to stop a pod, it sends SIGTERM.</span>
+      <span class="token-comment"># The BEAM needs time to finish processing, flush logs, and close connections.</span>
+<span class="token-keyword">      terminationGracePeriodSeconds:</span> 60</code></pre></div>
+</div>
+
+<h3 id="service" class="content-subtitle fade-in">Service</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># k8s/service.yaml — Load balancer for the Elixir app</span>
+<span class="token-comment"># WHY: A Service provides a stable DNS name and IP that routes to pods.</span>
+<span class="token-comment"># Without a Service, pods have ephemeral IPs that change on restart.</span>
+<span class="token-keyword">
+apiVersion:</span> v1
+<span class="token-keyword">kind:</span> Service
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> agentic-platform
+<span class="token-keyword">  labels:</span>
+<span class="token-keyword">    app:</span> agentic-platform
+<span class="token-keyword">spec:</span>
+<span class="token-keyword">  type:</span> ClusterIP
+  <span class="token-comment"># WHY: ClusterIP is internal-only. Use Ingress for external access.</span>
+  <span class="token-comment"># ClusterIP is the safest default — no accidental public exposure.</span>
+<span class="token-keyword">
+  ports:</span>
+    - name: http
+<span class="token-keyword">      port:</span> 80
+<span class="token-keyword">      targetPort:</span> http
+<span class="token-keyword">      protocol:</span> TCP
+    - name: dist
+<span class="token-keyword">      port:</span> 4364
+<span class="token-keyword">      targetPort:</span> dist
+<span class="token-keyword">      protocol:</span> TCP
+      <span class="token-comment"># WHY: Port 4364 is the BEAM distribution port. Elixir nodes</span>
+      <span class="token-comment"># need this to communicate with each other across pods.</span>
+<span class="token-keyword">
+  selector:</span>
+<span class="token-keyword">    app:</span> agentic-platform</code></pre></div>
+</div>
+
+<h3 id="configmap" class="content-subtitle fade-in">ConfigMap</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># k8s/configmap.yaml — Non-sensitive configuration</span>
+<span class="token-comment"># WHY: ConfigMaps separate config from code. You can change config</span>
+<span class="token-comment"># without rebuilding the Docker image. ConfigMaps are visible to</span>
+<span class="token-comment"># anyone with K8s read access — never put secrets here.</span>
+<span class="token-keyword">
+apiVersion:</span> v1
+<span class="token-keyword">kind:</span> ConfigMap
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> agentic-platform-config
+<span class="token-keyword">  labels:</span>
+<span class="token-keyword">    app:</span> agentic-platform
+<span class="token-keyword">data:</span>
+  <span class="token-comment"># Phoenix configuration</span>
+<span class="token-keyword">  PHOENIX_ENV:</span> <span class="token-string">"prod"</span>
+<span class="token-keyword">  PHOENIX_HOST:</span> <span class="token-string">"0.0.0.0"</span>
+<span class="token-keyword">  PHOENIX_PORT:</span> <span class="token-string">"4000"</span>
+<span class="token-keyword">  PHOENIX_SERVER:</span> <span class="token-string">"true"</span>
+
+  <span class="token-comment"># Elixir distribution</span>
+<span class="token-keyword">  RELEASE_DISTRIBUTION:</span> <span class="token-string">"name"</span>
+<span class="token-keyword">  RELEASE_NODE:</span> <span class="token-string">"agentic-platform@agentic-platform.agentic-platform.svc.cluster.local"</span>
+  <span class="token-comment"># WHY: K8s DNS resolves this to the pod's ClusterIP. Elixir nodes</span>
+  <span class="token-comment"># use this to find each other across pods.</span>
+
+  <span class="token-comment"># Logging</span>
+<span class="token-keyword">  LOG_LEVEL:</span> <span class="token-string">"info"</span>
+<span class="token-keyword">  ERL_AFLAGS:</span> <span class="token-string">"-proto_dist inet_tcp"</span>
+
+  <span class="token-comment"># Telemetry</span>
+<span class="token-keyword">  OTEL_EXPORTER_OTLP_ENDPOINT:</span> <span class="token-string">"http://jaeger-collector.telemetry.svc.cluster.local:4317"</span>
+<span class="token-keyword">  PROMETHEUS_PORT:</span> <span class="token-string">"9090"</span></code></pre></div>
+</div>
+
+<h3 id="go-gateway-deployment" class="content-subtitle fade-in">Go Gateway Deployment</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># k8s/go-gateway-deployment.yaml — Go AgentBridge Gateway</span>
+<span class="token-keyword">apiVersion:</span> apps/v1
+<span class="token-keyword">kind:</span> Deployment
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> agent-gateway
+<span class="token-keyword">  labels:</span>
+<span class="token-keyword">    app:</span> agent-gateway
+<span class="token-keyword">    component:</span> infrastructure
+<span class="token-keyword">spec:</span>
+<span class="token-keyword">  replicas:</span> 2
+<span class="token-keyword">  selector:</span>
+<span class="token-keyword">    matchLabels:</span>
+<span class="token-keyword">      app:</span> agent-gateway
+<span class="token-keyword">  template:</span>
+<span class="token-keyword">    metadata:</span>
+<span class="token-keyword">      labels:</span>
+<span class="token-keyword">        app:</span> agent-gateway
+<span class="token-keyword">    spec:</span>
+<span class="token-keyword">      containers:</span>
+        - name: agent-gateway
+<span class="token-keyword">          image:</span> agentic-gateway:latest
+<span class="token-keyword">          ports:</span>
+            - containerPort: 50051
+<span class="token-keyword">              name:</span> grpc
+            - containerPort: 8080
+<span class="token-keyword">              name:</span> http
+<span class="token-keyword">          resources:</span>
+<span class="token-keyword">            requests:</span>
+<span class="token-keyword">              cpu:</span> <span class="token-string">"100m"</span>
+<span class="token-keyword">              memory:</span> <span class="token-string">"128Mi"</span>
+<span class="token-keyword">            limits:</span>
+<span class="token-keyword">              cpu:</span> <span class="token-string">"500m"</span>
+<span class="token-keyword">              memory:</span> <span class="token-string">"256Mi"</span>
+<span class="token-keyword">          livenessProbe:</span>
+<span class="token-keyword">            httpGet:</span>
+<span class="token-keyword">              path:</span> /healthz
+<span class="token-keyword">              port:</span> http
+<span class="token-keyword">            initialDelaySeconds:</span> 5
+<span class="token-keyword">            periodSeconds:</span> 10
+<span class="token-keyword">          readinessProbe:</span>
+<span class="token-keyword">            httpGet:</span>
+<span class="token-keyword">              path:</span> /healthz
+<span class="token-keyword">              port:</span> http
+<span class="token-keyword">            initialDelaySeconds:</span> 3
+<span class="token-keyword">            periodSeconds:</span> 5
+---
+<span class="token-keyword">apiVersion:</span> v1
+<span class="token-keyword">kind:</span> Service
+<span class="token-keyword">metadata:</span>
+<span class="token-keyword">  name:</span> agent-gateway
+<span class="token-keyword">spec:</span>
+<span class="token-keyword">  type:</span> ClusterIP
+<span class="token-keyword">  ports:</span>
+    - name: grpc
+<span class="token-keyword">      port:</span> 50051
+<span class="token-keyword">      targetPort:</span> grpc
+    - name: http
+<span class="token-keyword">      port:</span> 8080
+<span class="token-keyword">      targetPort:</span> http
+<span class="token-keyword">  selector:</span>
+<span class="token-keyword">    app:</span> agent-gateway</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-3-helm-charts" class="section-title fade-in">Pattern 3: Helm Charts</h2>
+
+<h3 id="why-helm" class="content-subtitle fade-in">Why Helm?</h3>
+
+<p class="fade-in">Kubernetes YAML is verbose. A production deployment has 50+ lines per resource. Helm templates these resources with variables. You override values per environment (dev, staging, prod) without copying YAML files.</p>
+
+<h3 id="chart-structure" class="content-subtitle fade-in">Chart Structure</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>agentic-platform-chart/
+├── Chart.yaml          # Chart metadata
+├── values.yaml         # Default values (overridden per environment)
+├── values-dev.yaml     # Dev overrides
+├── values-prod.yaml    # Production overrides
+└── templates/
+    ├── _helpers.tpl    # Template helpers
+    ├── deployment.yaml
+    ├── service.yaml
+    ├── configmap.yaml
+    ├── ingress.yaml
+    └── hpa.yaml        # Horizontal Pod Autoscaler</code></pre></div>
+</div>
+
+<h3 id="valuesyaml" class="content-subtitle fade-in">values.yaml</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># values.yaml — Default Helm values</span>
+<span class="token-comment"># WHY: These are sensible defaults. Override per environment in values-{env}.yaml.</span>
+<span class="token-keyword">
+replicaCount:</span>
+<span class="token-keyword">  elixir:</span> 3
+<span class="token-keyword">  gateway:</span> 2
+<span class="token-keyword">
+image:</span>
+<span class="token-keyword">  elixir:</span>
+<span class="token-keyword">    repository:</span> agentic-platform
+<span class="token-keyword">    tag:</span> <span class="token-string">"latest"</span>
+<span class="token-keyword">    pullPolicy:</span> IfNotPresent
+<span class="token-keyword">  gateway:</span>
+<span class="token-keyword">    repository:</span> agentic-gateway
+<span class="token-keyword">    tag:</span> <span class="token-string">"latest"</span>
+<span class="token-keyword">    pullPolicy:</span> IfNotPresent
+<span class="token-keyword">
+service:</span>
+<span class="token-keyword">  elixir:</span>
+<span class="token-keyword">    type:</span> ClusterIP
+<span class="token-keyword">    port:</span> 80
+<span class="token-keyword">  gateway:</span>
+<span class="token-keyword">    type:</span> ClusterIP
+<span class="token-keyword">    grpcPort:</span> 50051
+<span class="token-keyword">    httpPort:</span> 8080
+<span class="token-keyword">
+resources:</span>
+<span class="token-keyword">  elixir:</span>
+<span class="token-keyword">    requests:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"250m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"512Mi"</span>
+<span class="token-keyword">    limits:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"1000m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"1Gi"</span>
+<span class="token-keyword">  gateway:</span>
+<span class="token-keyword">    requests:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"100m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"128Mi"</span>
+<span class="token-keyword">    limits:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"500m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"256Mi"</span>
+
+<span class="token-comment"># Database connection — overridden by secrets</span>
+<span class="token-keyword">database:</span>
+<span class="token-keyword">  host:</span> <span class="token-string">"postgres.default.svc.cluster.local"</span>
+<span class="token-keyword">  port:</span> 5432
+<span class="token-keyword">  name:</span> <span class="token-string">"agentic_platform"</span>
+<span class="token-keyword">
+redis:</span>
+<span class="token-keyword">  host:</span> <span class="token-string">"redis.default.svc.cluster.local"</span>
+<span class="token-keyword">  port:</span> 6379
+
+<span class="token-comment"># Health check configuration</span>
+<span class="token-keyword">healthCheck:</span>
+<span class="token-keyword">  liveness:</span>
+<span class="token-keyword">    initialDelaySeconds:</span> 30
+<span class="token-keyword">    periodSeconds:</span> 10
+<span class="token-keyword">  readiness:</span>
+<span class="token-keyword">    initialDelaySeconds:</span> 10
+<span class="token-keyword">    periodSeconds:</span> 5
+<span class="token-keyword">  startup:</span>
+<span class="token-keyword">    initialDelaySeconds:</span> 10
+<span class="token-keyword">    periodSeconds:</span> 5
+<span class="token-keyword">    failureThreshold:</span> 30
+
+<span class="token-comment"># Autoscaling</span>
+<span class="token-keyword">autoscaling:</span>
+<span class="token-keyword">  enabled:</span> <span class="token-atom">false</span>
+<span class="token-keyword">  minReplicas:</span> 3
+<span class="token-keyword">  maxReplicas:</span> 10
+<span class="token-keyword">  targetCPUUtilizationPercentage:</span> 70
+<span class="token-keyword">  targetMemoryUtilizationPercentage:</span> 80</code></pre></div>
+</div>
+
+<h3 id="values-prodyaml" class="content-subtitle fade-in">values-prod.yaml</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">yaml</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># values-prod.yaml — Production overrides</span>
+<span class="token-keyword">replicaCount:</span>
+<span class="token-keyword">  elixir:</span> 5
+<span class="token-keyword">  gateway:</span> 3
+<span class="token-keyword">
+resources:</span>
+<span class="token-keyword">  elixir:</span>
+<span class="token-keyword">    requests:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"500m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"1Gi"</span>
+<span class="token-keyword">    limits:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"2000m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"2Gi"</span>
+<span class="token-keyword">  gateway:</span>
+<span class="token-keyword">    requests:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"200m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"256Mi"</span>
+<span class="token-keyword">    limits:</span>
+<span class="token-keyword">      cpu:</span> <span class="token-string">"1000m"</span>
+<span class="token-keyword">      memory:</span> <span class="token-string">"512Mi"</span>
+<span class="token-keyword">
+autoscaling:</span>
+<span class="token-keyword">  enabled:</span> <span class="token-atom">true</span>
+<span class="token-keyword">  minReplicas:</span> 5
+<span class="token-keyword">  maxReplicas:</span> 20
+<span class="token-keyword">  targetCPUUtilizationPercentage:</span> 60
+
+<span class="token-comment"># Production uses specific image tags, never "latest"</span>
+<span class="token-keyword">image:</span>
+<span class="token-keyword">  elixir:</span>
+<span class="token-keyword">    tag:</span> <span class="token-string">"v1.2.3"</span>
+<span class="token-keyword">    pullPolicy:</span> Always
+<span class="token-keyword">  gateway:</span>
+<span class="token-keyword">    tag:</span> <span class="token-string">"v1.2.3"</span>
+<span class="token-keyword">    pullPolicy:</span> Always</code></pre></div>
+</div>
+
+<h3 id="helm-commands" class="content-subtitle fade-in">Helm Commands</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Install the chart in dev</span>
+helm install agentic ./agentic-platform-chart \
+  -f agentic-platform-chart/values-dev.yaml \
+  --namespace agentic-dev
+
+<span class="token-comment"># Upgrade to a new version in production</span>
+helm upgrade agentic ./agentic-platform-chart \
+  -f agentic-platform-chart/values-prod.yaml \
+  --<span class="token-keyword">set</span> image.elixir.tag=v1.3.0 \
+  --<span class="token-keyword">set</span> image.gateway.tag=v1.3.0 \
+  --namespace agentic-prod
+
+<span class="token-comment"># Rollback if something goes wrong</span>
+helm rollback agentic 1 --namespace agentic-prod
+
+<span class="token-comment"># List all releases</span>
+helm list --all-namespaces</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-4-terraform-infrastructure" class="section-title fade-in">Pattern 4: Terraform Infrastructure</h2>
+
+<h3 id="why-terraform" class="content-subtitle fade-in">Why Terraform?</h3>
+
+<p class="fade-in">Kubernetes runs your containers, but who creates the Kubernetes cluster? Who provisions the database, the cache, the networking? Terraform manages cloud infrastructure declaratively.</p>
+
+<h3 id="maintf" class="content-subtitle fade-in">main.tf</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">hcl</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code># main.tf — Terraform configuration for the Agentic Platform
+#
+# WHY: Terraform creates cloud resources (VPC, EKS, RDS, ElastiCache)
+# that Kubernetes runs on. Without Terraform, you'd manually click
+# through the AWS console — slow, error-prone, and impossible to version.
+
+terraform {
+  required_version = "&gt;= 1.10.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+    }
+  }
+
+  # Remote state storage — critical for team collaboration
+  # WHY: Local state means only one person can run Terraform at a time.
+  # S3 backend lets the team share state with locking.
+  backend "s3" {
+    bucket         = "agentic-platform-tfstate"
+    key            = "prod/terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}
+
+# Provider configuration
+provider "aws" {
+  region = var.aws_region
+}
+
+# Variables
+variable "aws_region" {
+  description = "AWS region for all resources"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+}
+
+variable "cluster_name" {
+  description = "EKS cluster name"
+  type        = string
+  default     = "agentic-platform"
+}
+
+# ============================================================
+# VPC — isolated network for the platform
+# ============================================================
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.8.0"
+
+  name = "${var.cluster_name}-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = var.environment != "prod"
+  # WHY: Single NAT gateway in dev saves $32/month. Three NAT gateways
+  # in prod for high availability.
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Environment = var.environment
+    Project     = "agentic-platform"
+  }
+}
+
+# ============================================================
+# EKS — managed Kubernetes cluster
+# ============================================================
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.0"
+
+  cluster_name    = var.cluster_name
+  cluster_version = "1.30"
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  # Managed node groups
+  eks_managed_node_groups = {
+    # General workloads — Elixir agents, Go gateway
+    general = {
+      desired_size = 3
+      min_size     = 2
+      max_size     = 10
+
+      instance_types = ["t3.large"]
+      # WHY: t3.large has 2 vCPU and 8GB RAM — enough for BEAM + Go processes.
+
+      labels = {
+        role = "general"
+      }
+    }
+
+    # Monitoring — Prometheus, Grafana, Loki
+    monitoring = {
+      desired_size = 2
+      min_size     = 1
+      max_size     = 3
+
+      instance_types = ["t3.medium"]
+
+      labels = {
+        role = "monitoring"
+      }
+    }
+  }
+
+  tags = {
+    Environment = var.environment
+    Project     = "agentic-platform"
+  }
+}
+
+# ============================================================
+# RDS — managed PostgreSQL
+# ============================================================
+module "postgres" {
+  source  = "terraform-aws-modules/rds/aws"
+  version = "6.4"
+
+  identifier = "${var.cluster_name}-postgres"
+
+  engine         = "postgres"
+  engine_version = "16.2"
+  instance_class = var.environment == "prod" ? "db.r6g.large" : "db.t3.medium"
+
+  allocated_storage     = 50
+  max_allocated_storage = 200
+  # WHY: max_allocated_storage enables autoscaling. When the database
+  # fills up, RDS automatically increases storage up to 200GB.
+
+  db_name  = "agentic_platform"
+  username = "agentic_admin"
+  # COMMON MISTAKE: Using "postgres" as the username. It's the first thing
+  # attackers try. Use a non-obvious name.
+
+  password = var.db_password
+  # WHY: This variable should come from a .tfvars file or environment variable.
+  # NEVER commit passwords to version control.
+
+  port = 5432
+
+  multi_az               = var.environment == "prod"
+  # WHY: Multi-AZ creates a standby replica in another availability zone.
+  # If the primary fails, RDS automatically fails over to the standby.
+
+  db_subnet_group_name   = module.vpc.database_subnet_group_name
+  vpc_security_group_ids = [module.vpc.default_security_group_id]
+
+  backup_retention_period = var.environment == "prod" ? 30 : 7
+  # WHY: 30 days of backups in prod lets you recover from accidental
+  # deletion up to a month later.
+
+  tags = {
+    Environment = var.environment
+    Project     = "agentic-platform"
+  }
+}
+
+# ============================================================
+# ElastiCache — managed Redis
+# ============================================================
+module "redis" {
+  source  = "terraform-aws-modules/elasticache/aws"
+  version = "1.3"
+
+  replication_group_id = "${var.cluster_name}-redis"
+  description          = "Redis for Oban job queue and caching"
+
+  engine               = "redis"
+  engine_version       = "7.0"
+  node_type            = var.environment == "prod" ? "cache.r6g.large" : "cache.t3.medium"
+  num_cache_clusters   = var.environment == "prod" ? 2 : 1
+  # WHY: 2 clusters in prod for automatic failover.
+
+  port = 6379
+
+  subnet_group_name  = module.vpc.elasticache_subnet_group_name
+  security_group_ids = [module.vpc.default_security_group_id]
+
+  tags = {
+    Environment = var.environment
+    Project     = "agentic-platform"
+  }
+}
+
+# ============================================================
+# Outputs — values needed by Helm
+# ============================================================
+output "eks_cluster_endpoint" {
+  description = "EKS cluster API endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "postgres_endpoint" {
+  description = "RDS endpoint"
+  value       = module.postgres.db_instance_endpoint
+}
+
+output "redis_endpoint" {
+  description = "ElastiCache Redis endpoint"
+  value       = module.redis.elasticache_replication_group_primary_endpoint_address
+}</code></pre></div>
+</div>
+
+<h3 id="terraform-commands" class="content-subtitle fade-in">Terraform Commands</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Initialize — download providers and modules</span>
+terraform init
+
+<span class="token-comment"># Plan — preview changes without applying</span>
+terraform plan -var=<span class="token-string">"environment=dev"</span>
+
+<span class="token-comment"># Apply — create the infrastructure</span>
+terraform apply -var=<span class="token-string">"environment=dev"</span>
+
+<span class="token-comment"># Destroy — tear down everything (use carefully!)</span>
+terraform destroy -var=<span class="token-string">"environment=dev"</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="pattern-5-health-probe-deep-dive" class="section-title fade-in">Pattern 5: Health Probe Deep Dive</h2>
+
+<h3 id="why-three-probes" class="content-subtitle fade-in">Why Three Probes?</h3>
+
+<p class="fade-in">K8s has three types of health probes, each solving a different problem:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Pod Startup Timeline:
+│
+├─ Container starts
+│  ├─ BEAM VM boots (~5s)
+│  ├─ Elixir compiles (~30s in prod with precompiled)
+│  ├─ OTP applications start (~10s)
+│  ├─ Database migrations run (~5s)
+│  ├─ Telemetry setup (~1s)
+│  └─ App ready to serve traffic
+│
+├─ Startup probe: "Are you done starting?"
+│  └─ K8s only checks liveness/readiness AFTER this succeeds
+│
+├─ Liveness probe: "Is the process alive?"
+│  └─ If this fails, K8s restarts the pod
+│
+└─ Readiness probe: "Can you handle traffic?"
+   └─ If this fails, K8s removes the pod from the Service</code></pre></div>
+</div>
+
+<h3 id="health-endpoint-implementation" class="content-subtitle fade-in">Health Endpoint Implementation</h3>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">elixir</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-keyword">defmodule</span> <span class="token-type">AgenticPlatformWeb.HealthController</span> <span class="token-keyword">do</span>
+  <span class="token-keyword">use</span> <span class="token-type">Phoenix.Controller</span>
+
+  <span class="token-comment"># Liveness check — is the BEAM VM alive?</span>
+  <span class="token-comment"># WHY: This should always succeed unless the VM is deadlocked.</span>
+  <span class="token-comment"># Don't check external dependencies here — a database outage shouldn't</span>
+  <span class="token-comment"># restart every pod.</span>
+  <span class="token-keyword">def</span> <span class="token-function">healthz</span>(conn, _params) <span class="token-keyword">do</span>
+    <span class="token-function">send_resp</span>(conn, <span class="token-number">200</span>, <span class="token-string">"ok"</span>)
+  <span class="token-keyword">end</span>
+
+  <span class="token-comment"># Readiness check — is the app ready to serve traffic?</span>
+  <span class="token-comment"># WHY: This checks external dependencies. If the database is unreachable,</span>
+  <span class="token-comment"># the pod shouldn't receive traffic even if the BEAM is alive.</span>
+  <span class="token-keyword">def</span> <span class="token-function">readyz</span>(conn, _params) <span class="token-keyword">do</span>
+    checks = [
+      <span class="token-function">check_database</span>(),
+      <span class="token-function">check_redis</span>(),
+      <span class="token-function">check_telemetry</span>()
+    ]
+
+    <span class="token-keyword">if</span> <span class="token-type">Enum</span>.all?(checks, &amp;match?({<span class="token-atom">:ok</span>, _}, &amp;<span class="token-number">1</span>)) <span class="token-keyword">do</span>
+      <span class="token-function">send_resp</span>(conn, <span class="token-number">200</span>, <span class="token-string">"ready"</span>)
+    <span class="token-keyword">else</span>
+      failures = <span class="token-type">Enum</span>.<span class="token-function">filter</span>(checks, &amp;match?({<span class="token-atom">:error</span>, _}, &amp;<span class="token-number">1</span>))
+      <span class="token-function">json</span>(conn, %{status: <span class="token-string">"not ready"</span>, failures: failures})
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> check_database <span class="token-keyword">do</span>
+    <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+      <span class="token-type">Ecto.Adapters.SQL</span>.query!(<span class="token-type">AgenticPlatform.Repo</span>, <span class="token-string">"SELECT 1"</span>, [])
+      {<span class="token-atom">:ok</span>, <span class="token-atom">:database</span>}
+    <span class="token-keyword">rescue</span>
+      e -&gt; {<span class="token-atom">:error</span>, {<span class="token-atom">:database</span>, <span class="token-type">Exception</span>.<span class="token-function">message</span>(e)}}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> check_redis <span class="token-keyword">do</span>
+    <span class="token-keyword">try</span> <span class="token-keyword">do</span>
+      <span class="token-type">Redix</span>.command!(<span class="token-type">AgenticPlatform.Redis</span>, [<span class="token-string">"PING"</span>])
+      {<span class="token-atom">:ok</span>, <span class="token-atom">:redis</span>}
+    <span class="token-keyword">rescue</span>
+      e -&gt; {<span class="token-atom">:error</span>, {<span class="token-atom">:redis</span>, <span class="token-type">Exception</span>.<span class="token-function">message</span>(e)}}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+
+  <span class="token-keyword">defp</span> check_telemetry <span class="token-keyword">do</span>
+    <span class="token-comment"># Check if telemetry handlers are attached</span>
+    <span class="token-keyword">if</span> <span class="token-type">Process</span>.<span class="token-function">whereis</span>(<span class="token-atom">:telemetry_handler_registry</span>) <span class="token-keyword">do</span>
+      {<span class="token-atom">:ok</span>, <span class="token-atom">:telemetry</span>}
+    <span class="token-keyword">else</span>
+      {<span class="token-atom">:error</span>, {<span class="token-atom">:telemetry</span>, <span class="token-string">"handler registry not started"</span>}}
+    <span class="token-keyword">end</span>
+  <span class="token-keyword">end</span>
+<span class="token-keyword">end</span></code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="deployment-sequence" class="section-title fade-in">Deployment Sequence</h2>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">bash</span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment"># Step 1: Provision infrastructure</span>
+cd terraform
+terraform init
+terraform apply -var=<span class="token-string">"environment=prod"</span>
+
+<span class="token-comment"># Step 2: Configure kubectl</span>
+aws eks update-kubeconfig --name agentic-platform --region us-west-2
+
+<span class="token-comment"># Step 3: Create secrets</span>
+kubectl create secret generic agentic-platform-secrets \
+  --from-literal=database-url=<span class="token-string">"ecto://agentic_admin:PASSWORD@RDS_ENDPOINT/agentic_platform"</span> \
+  --from-literal=secret-key-base=<span class="token-string">"LONG_RANDOM_STRING"</span> \
+  --from-literal=redis-url=<span class="token-string">"redis://REDIS_ENDPOINT:6379"</span>
+
+<span class="token-comment"># Step 4: Deploy with Helm</span>
+cd ../agentic-platform-chart
+helm upgrade --install agentic . \
+  -f values-prod.yaml \
+  --namespace agentic-prod \
+  --create-namespace
+
+<span class="token-comment"># Step 5: Verify</span>
+kubectl get pods -n agentic-prod
+kubectl get svc -n agentic-prod
+kubectl logs -f deployment/agentic-platform -n agentic-prod</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">Your platform is deployed to production. Continue to <a href="16-capstone.md">Module 16: Capstone</a> to bring everything together.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="14-observability-stack.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Observability Stack</a>
+        <a href="16-capstone.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Capstone: Agentic Platform →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

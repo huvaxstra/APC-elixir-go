@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Prometheus Exporters — Agentic Platform Course</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="particles"></div>
+  <div class="reading-progress"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">⚡ Agentic Platform</a>
+      <ul class="nav-links"><a href="00-setup.html" class="nav-link" title="Environment Setup">Setup</a><a href="01-go-fundamentals.html" class="nav-link" title="Go Fundamentals">W1</a><a href="02-go-cli-http.html" class="nav-link" title="Go CLI & HTTP">W2</a><a href="03-elixir-fundamentals.html" class="nav-link" title="Elixir Fundamentals">W3</a><a href="04-otp-genserver.html" class="nav-link" title="OTP & GenServer">W4</a><a href="05-multi-agent-supervision.html" class="nav-link" title="Multi-Agent Supervision">W5</a><a href="06-phoenix-liveview.html" class="nav-link" title="Phoenix LiveView Dashboard">W6</a><a href="07-agent-communication.html" class="nav-link" title="Agent Communication & Signals">W7</a><a href="08-agent-state-durable.html" class="nav-link" title="Agent State & Durable Workflows">W8</a><a href="09-advanced-otp.html" class="nav-link" title="Advanced OTP Patterns">W9</a><a href="10-clustering-distribution.html" class="nav-link" title="Clustering & Distribution">W10</a><a href="11-go-k8s-operators.html" class="nav-link" title="Go K8s Operators">W11</a><a href="12-go-prometheus.html" class="nav-link active" title="Go Prometheus Exporters">W12</a><a href="13-grpc-bridge.html" class="nav-link" title="Bridge: gRPC">W13</a><a href="14-observability-stack.html" class="nav-link" title="Observability Stack">W14</a><a href="15-production-deployment.html" class="nav-link" title="Production Deployment">W15</a><a href="16-capstone.html" class="nav-link" title="Capstone: Agentic Platform">W16</a></ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="article">
+      <div class="article-header fade-in">
+        <div class="article-week">Week 12</div>
+        <h1 class="article-title">Go Prometheus Exporters</h1>
+        <div class="article-meta">
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Week 12
+          </span>
+          <span class="article-meta-item">
+            <svg class="article-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            client_golang, custom metrics, RED
+          </span>
+          <span class="article-meta-item lang-go" style="font-weight:600;color:var(--accent-blue)">
+            Go
+          </span>
+        </div>
+      </div>
+
+      <div class="content">
+        <h1 id="module-12-go-prometheus-exporters-week-12" class="article-title fade-in">Module 12: Go Prometheus Exporters (Week 12)</h1>
+
+<h2 id="what-youll-learn-this-module" class="section-title fade-in">What You'll Learn This Module</h2>
+
+<p class="fade-in">By the end of this module, you'll understand how to instrument Go services with Prometheus metrics:</p>
+
+<ol class="fade-in">
+  <li><strong>prometheus/client_golang</strong> — the CNCF standard for Go metrics</li>
+  <li><strong>Counter, Gauge, Histogram</strong> — the three metric types and when to use each</li>
+  <li><strong>Labels</strong> — dimensional metrics for filtering and aggregation</li>
+  <li><strong>RED metrics</strong> — Rate, Errors, Duration — the gold standard for service monitoring</li>
+  <li><strong>Histogram buckets and quantiles</strong> — understanding latency distributions</li>
+  <li><strong>HTTP middleware</strong> — automatically instrumenting HTTP handlers</li>
+</ol>
+
+<p class="fade-in">This is how every production Go service is monitored. The Prometheus operator, the Kubernetes metrics server, and every CNCF project use client_golang. If you write Go services, this is essential knowledge.</p>
+
+<hr class="fade-in">
+
+<h2 id="why-prometheus" class="section-title fade-in">Why Prometheus?</h2>
+
+<p class="fade-in">Prometheus is the standard for cloud-native monitoring. It's a CNCF graduated project (the highest maturity level). Every Kubernetes cluster uses it. Every major cloud provider supports it.</p>
+
+<p class="fade-in">Think of Prometheus as a financial auditor for your service. It periodically checks your service's "books" (metrics endpoint) and records what it finds. When something goes wrong (high error rate, slow latency), you can look at the historical data and find the root cause.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang"></span>
+    
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code>Your Service → /metrics endpoint → Prometheus → Grafana Dashboard
+     ↑                                          ↓
+     └──────── instrumented with ───────────────┘
+              client_golang library</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="the-three-metric-types" class="section-title fade-in">The Three Metric Types</h2>
+
+<h3 id="counter--monotonically-increasing-value" class="content-subtitle fade-in">Counter — Monotonically Increasing Value</h3>
+
+<p class="fade-in">A Counter only goes up. It tracks things like total requests, total errors, total bytes processed. You never decrease a Counter — you create a new one if you need to reset.</p>
+
+<p class="fade-in">Think of a car's odometer. It only goes forward. You can't roll it back. When you sell the car, you don't reset the odometer — you start a new one.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/counters.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/counters.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Counter metrics track cumulative totals.</span>
+<span class="token-comment">// They only increase — never decrease.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Use counters for:</span>
+<span class="token-comment">// - Total HTTP requests</span>
+<span class="token-comment">// - Total errors</span>
+<span class="token-comment">// - Total bytes sent/received</span>
+<span class="token-comment">// - Total items processed</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Using a Gauge for cumulative totals.</span>
+<span class="token-comment">// A Gauge can go up AND down. A Counter only goes up.</span>
+<span class="token-comment">// If you use a Gauge for total requests, you might accidentally</span>
+<span class="token-comment">// decrease it, which corrupts your metrics.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why only go up?</span>
+<span class="token-comment">// Counters are designed for rate calculations.</span>
+<span class="token-comment">// To get requests per second, Prometheus calculates:</span>
+<span class="token-comment">//   rate(total_requests[5m])</span>
+<span class="token-comment">// This works because the counter never decreases.</span>
+<span class="token-comment">// If the counter could decrease, the rate calculation would</span>
+<span class="token-comment">// give negative values, which are meaningless.</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus/promauto"</span>
+)
+
+<span class="token-keyword">var</span> (
+	<span class="token-comment">// Total HTTP requests received</span>
+	<span class="token-comment">// This counter increments every time a request arrives.</span>
+	<span class="token-comment">// Labels: method (GET, POST, etc.), path (/api/agents), status (200, 404, etc.)</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: promauto.With() registers the metric automatically.</span>
+	<span class="token-comment">// Without it, you'd need to call prometheus.Register() manually.</span>
+	<span class="token-comment">// promauto is convenient but hides registration errors.</span>
+	<span class="token-comment">// For production, consider manual registration for better error handling.</span>
+	HTTPRequestTotal = promauto.<span class="token-function">NewCounterVec</span>(
+		prometheus.CounterOpts{
+			Name: <span class="token-string">"http_requests_total"</span>,
+			Help: <span class="token-string">"Total number of HTTP requests"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>, <span class="token-string">"status"</span>},
+	)
+
+	<span class="token-comment">// Total HTTP errors (status &gt;= 500)</span>
+	<span class="token-comment">// This counter increments only for server errors.</span>
+	<span class="token-comment">// Labels: method, path, error_type</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// COMMON MISTAKE: Not labeling errors by type.</span>
+	<span class="token-comment">// Without error_type, you can't distinguish between</span>
+	<span class="token-comment">// "database connection failed" and "invalid input."</span>
+	<span class="token-comment">// Always label errors by their root cause.</span>
+	HTTPErrorsTotal = promauto.<span class="token-function">NewCounterVec</span>(
+		prometheus.CounterOpts{
+			Name: <span class="token-string">"http_errors_total"</span>,
+			Help: <span class="token-string">"Total number of HTTP errors (status &gt;= 500)"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>, <span class="token-string">"error_type"</span>},
+	)
+
+	<span class="token-comment">// Total agent invocations</span>
+	<span class="token-comment">// This counter increments every time an agent is invoked.</span>
+	<span class="token-comment">// Labels: agent_name, model</span>
+	AgentInvocationsTotal = promauto.<span class="token-function">NewCounterVec</span>(
+		prometheus.CounterOpts{
+			Name: <span class="token-string">"agent_invocations_total"</span>,
+			Help: <span class="token-string">"Total number of agent invocations"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>},
+	)
+
+	<span class="token-comment">// Total tokens consumed by agents</span>
+	<span class="token-comment">// This counter increments by the number of tokens used.</span>
+	<span class="token-comment">// Labels: agent_name, model, token_type (input, output)</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why track tokens?</span>
+	<span class="token-comment">// AI model costs are proportional to token usage.</span>
+	<span class="token-comment">// Tracking tokens lets you:</span>
+	<span class="token-comment">// 1. Monitor costs in real-time</span>
+	<span class="token-comment">// 2. Detect anomalies (sudden spike in token usage)</span>
+	<span class="token-comment">// 3. Optimize prompts (reduce token consumption)</span>
+	AgentTokensTotal = promauto.<span class="token-function">NewCounterVec</span>(
+		prometheus.CounterOpts{
+			Name: <span class="token-string">"agent_tokens_total"</span>,
+			Help: <span class="token-string">"Total number of tokens consumed by agents"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>, <span class="token-string">"token_type"</span>},
+	)
+)</code></pre></div>
+</div>
+
+<h3 id="gauge--value-that-can-go-up-or-down" class="content-subtitle fade-in">Gauge — Value That Can Go Up or Down</h3>
+
+<p class="fade-in">A Gauge is a value that can increase or decrease. It tracks things like current temperature, queue length, memory usage, number of active connections.</p>
+
+<p class="fade-in">Think of a thermostat. The temperature goes up when the heater is on and down when it's off. It can be any value within a range.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/gauges.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/gauges.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Gauge metrics track values that can go up AND down.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Use gauges for:</span>
+<span class="token-comment">// - Current number of active connections</span>
+<span class="token-comment">// - Current queue length</span>
+<span class="token-comment">// - Memory usage</span>
+<span class="token-comment">// - CPU usage</span>
+<span class="token-comment">// - Number of goroutines</span>
+<span class="token-comment">// - Current temperature</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Using a Gauge for rates.</span>
+<span class="token-comment">// A Gauge shows the current value, not the rate of change.</span>
+<span class="token-comment">// To get the rate of a Gauge, you need to calculate:</span>
+<span class="token-comment">//   rate(gauge_value[5m])</span>
+<span class="token-comment">// But this is usually wrong — gauges represent snapshots,</span>
+<span class="token-comment">// not cumulative totals.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Gauge vs Counter</span>
+<span class="token-comment">// Counter: "How many requests have I processed?" (always increasing)</span>
+<span class="token-comment">// Gauge: "How many requests am I processing right now?" (fluctuates)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// If you're unsure, ask: "Can this value decrease naturally?"</span>
+<span class="token-comment">// If yes → Gauge. If no → Counter.</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus/promauto"</span>
+)
+
+<span class="token-keyword">var</span> (
+	<span class="token-comment">// Current number of active agent sessions</span>
+	<span class="token-comment">// This gauge increases when a session starts and decreases when it ends.</span>
+	<span class="token-comment">// Labels: agent_name</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why track active sessions?</span>
+	<span class="token-comment">// Because active sessions consume memory and CPU.</span>
+	<span class="token-comment">// If active sessions spike, you might need to scale up.</span>
+	<span class="token-comment">// If active sessions drop to zero, something might be wrong.</span>
+	ActiveSessions = promauto.<span class="token-function">NewGaugeVec</span>(
+		prometheus.GaugeOpts{
+			Name: <span class="token-string">"agent_active_sessions"</span>,
+			Help: <span class="token-string">"Current number of active agent sessions"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>},
+	)
+
+	<span class="token-comment">// Current queue length for agent tasks</span>
+	<span class="token-comment">// This gauge shows how many tasks are waiting to be processed.</span>
+	<span class="token-comment">// If the queue grows, agents are falling behind.</span>
+	<span class="token-comment">// Labels: agent_name, queue_name</span>
+	QueueLength = promauto.<span class="token-function">NewGaugeVec</span>(
+		prometheus.GaugeOpts{
+			Name: <span class="token-string">"agent_queue_length"</span>,
+			Help: <span class="token-string">"Current number of tasks in the agent queue"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"queue_name"</span>},
+	)
+
+	<span class="token-comment">// Memory usage in bytes</span>
+	<span class="token-comment">// This gauge shows current memory consumption.</span>
+	<span class="token-comment">// Labels: agent_name</span>
+	MemoryUsage = promauto.<span class="token-function">NewGaugeVec</span>(
+		prometheus.GaugeOpts{
+			Name: <span class="token-string">"agent_memory_usage_bytes"</span>,
+			Help: <span class="token-string">"Current memory usage in bytes"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>},
+	)
+
+	<span class="token-comment">// Number of goroutines</span>
+	<span class="token-comment">// This gauge shows the current goroutine count.</span>
+	<span class="token-comment">// A growing goroutine count may indicate a leak.</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// COMMON MISTAKE: Not monitoring goroutine count.</span>
+	<span class="token-comment">// Goroutine leaks are common in Go services.</span>
+	<span class="token-comment">// A goroutine that blocks forever consumes memory and never releases it.</span>
+	<span class="token-comment">// Monitoring goroutine count helps detect leaks early.</span>
+	GoroutineCount = promauto.<span class="token-function">NewGauge</span>(
+		prometheus.GaugeOpts{
+			Name: <span class="token-string">"go_goroutines"</span>,
+			Help: <span class="token-string">"Current number of goroutines"</span>,
+		},
+	)
+
+	<span class="token-comment">// Model inference latency in milliseconds</span>
+	<span class="token-comment">// This gauge shows the current average latency.</span>
+	<span class="token-comment">// Labels: model</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why a Gauge for latency instead of Histogram?</span>
+	<span class="token-comment">// This is a simplified view. In production, use a Histogram</span>
+	<span class="token-comment">// for latency (see next section). This Gauge is useful for</span>
+	<span class="token-comment">// quick debugging — "what's the latency RIGHT NOW?"</span>
+	CurrentLatency = promauto.<span class="token-function">NewGaugeVec</span>(
+		prometheus.GaugeOpts{
+			Name: <span class="token-string">"agent_current_latency_ms"</span>,
+			Help: <span class="token-string">"Current average inference latency in milliseconds"</span>,
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"model"</span>},
+	)
+)</code></pre></div>
+</div>
+
+<h3 id="histogram--distribution-of-values" class="content-subtitle fade-in">Histogram — Distribution of Values</h3>
+
+<p class="fade-in">A Histogram tracks the distribution of values. It counts how many values fall into predefined buckets. This lets you calculate percentiles (p50, p95, p99) and averages.</p>
+
+<p class="fade-in">Think of a histogram like a test score distribution. You don't just want the average score — you want to know how many students scored 90-100, 80-89, 70-79, etc. This tells you if most students are doing well or if there's a wide spread.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/histograms.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/histograms.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Histogram metrics track the distribution of values.</span>
+<span class="token-comment">// They count how many observations fall into predefined buckets.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Use histograms for:</span>
+<span class="token-comment">// - Request latency (how long requests take)</span>
+<span class="token-comment">// - Response size (how big responses are)</span>
+<span class="token-comment">// - Queue wait time (how long items wait in queue)</span>
+<span class="token-comment">// - Model inference time (how long AI models take to respond)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: How histograms work</span>
+<span class="token-comment">// A histogram has buckets. Each bucket has an upper bound.</span>
+<span class="token-comment">// When you observe a value, the histogram increments all buckets</span>
+<span class="token-comment">// where the upper bound is &gt;= the observed value.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Example with buckets [0.1, 0.5, 1.0, 5.0]:</span>
+<span class="token-comment">// - Observation 0.05 → increments bucket 0.1</span>
+<span class="token-comment">// - Observation 0.3  → increments buckets 0.1, 0.5</span>
+<span class="token-comment">// - Observation 0.8  → increments buckets 0.1, 0.5, 1.0</span>
+<span class="token-comment">// - Observation 3.0  → increments buckets 0.1, 0.5, 1.0, 5.0</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// From these buckets, Prometheus can calculate:</span>
+<span class="token-comment">// - p50 (median): the value where 50% of observations are below</span>
+<span class="token-comment">// - p95: the value where 95% of observations are below</span>
+<span class="token-comment">// - p99: the value where 99% of observations are below</span>
+<span class="token-comment">// - average: sum of all observations / count</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Choosing wrong bucket boundaries.</span>
+<span class="token-comment">// If your buckets don't match your data distribution, you get</span>
+<span class="token-comment">// inaccurate percentiles. For HTTP latency:</span>
+<span class="token-comment">// - Most requests: 10-100ms</span>
+<span class="token-comment">// - Slow requests: 100-1000ms</span>
+<span class="token-comment">// - Very slow requests: 1000ms+</span>
+<span class="token-comment">// Buckets should be: [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus/promauto"</span>
+)
+
+<span class="token-keyword">var</span> (
+	<span class="token-comment">// HTTP request duration in seconds</span>
+	<span class="token-comment">// Buckets: 10ms, 50ms, 100ms, 500ms, 1s, 5s, 10s</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why these specific buckets?</span>
+	<span class="token-comment">// - 0.01 (10ms): very fast requests (cache hits, simple lookups)</span>
+	<span class="token-comment">// - 0.05 (50ms): fast requests (simple API calls)</span>
+	<span class="token-comment">// - 0.1 (100ms): normal requests (database queries)</span>
+	<span class="token-comment">// - 0.5 (500ms): slow requests (complex queries, external APIs)</span>
+	<span class="token-comment">// - 1.0 (1s): very slow requests (timeout threshold)</span>
+	<span class="token-comment">// - 5.0 (5s): extremely slow requests (possible bugs)</span>
+	<span class="token-comment">// - 10.0 (10s): timeout threshold</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// These buckets cover the typical range of HTTP request durations.</span>
+	<span class="token-comment">// If your service has different latency characteristics, adjust accordingly.</span>
+	HTTPRequestDuration = promauto.<span class="token-function">NewHistogramVec</span>(
+		prometheus.HistogramOpts{
+			Name:    <span class="token-string">"http_request_duration_seconds"</span>,
+			Help:    <span class="token-string">"Duration of HTTP requests in seconds"</span>,
+			Buckets: []<span class="token-type">float64</span>{<span class="token-number">0.01</span>, <span class="token-number">0.05</span>, <span class="token-number">0.1</span>, <span class="token-number">0.5</span>, <span class="token-number">1.0</span>, <span class="token-number">5.0</span>, <span class="token-number">10.0</span>},
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>},
+	)
+
+	<span class="token-comment">// HTTP response size in bytes</span>
+	<span class="token-comment">// Buckets: 100B, 1KB, 10KB, 100KB, 1MB, 10MB</span>
+	HTTPResponseSize = promauto.<span class="token-function">NewHistogramVec</span>(
+		prometheus.HistogramOpts{
+			Name:    <span class="token-string">"http_response_size_bytes"</span>,
+			Help:    <span class="token-string">"Size of HTTP responses in bytes"</span>,
+			Buckets: []<span class="token-type">float64</span>{<span class="token-number">100</span>, <span class="token-number">1024</span>, <span class="token-number">10240</span>, <span class="token-number">102400</span>, <span class="token-number">1048576</span>, <span class="token-number">10485760</span>},
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>},
+	)
+
+	<span class="token-comment">// Agent inference duration in seconds</span>
+	<span class="token-comment">// Buckets: 100ms, 500ms, 1s, 2s, 5s, 10s, 30s, 60s</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why wider buckets for AI inference?</span>
+	<span class="token-comment">// AI model inference is much slower than HTTP requests.</span>
+	<span class="token-comment">// A simple prompt might take 100ms.</span>
+	<span class="token-comment">// A complex prompt with retrieval might take 5-30s.</span>
+	<span class="token-comment">// A very complex prompt might take 60s+.</span>
+	<span class="token-comment">// The buckets reflect this wider range.</span>
+	AgentInferenceDuration = promauto.<span class="token-function">NewHistogramVec</span>(
+		prometheus.HistogramOpts{
+			Name:    <span class="token-string">"agent_inference_duration_seconds"</span>,
+			Help:    <span class="token-string">"Duration of agent inference in seconds"</span>,
+			Buckets: []<span class="token-type">float64</span>{<span class="token-number">0.1</span>, <span class="token-number">0.5</span>, <span class="token-number">1.0</span>, <span class="token-number">2.0</span>, <span class="token-number">5.0</span>, <span class="token-number">10.0</span>, <span class="token-number">30.0</span>, <span class="token-number">60.0</span>},
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>},
+	)
+
+	<span class="token-comment">// Agent token count per request</span>
+	<span class="token-comment">// Buckets: 10, 50, 100, 500, 1000, 5000, 10000</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: Why track token count as a histogram?</span>
+	<span class="token-comment">// Because token count varies widely:</span>
+	<span class="token-comment">// - Simple query: 10-50 tokens</span>
+	<span class="token-comment">// - Complex query: 100-500 tokens</span>
+	<span class="token-comment">// - Long context: 1000-10000 tokens</span>
+	<span class="token-comment">// A histogram lets you see the distribution and calculate</span>
+	<span class="token-comment">// percentiles (p50, p95, p99 token usage).</span>
+	AgentTokenCount = promauto.<span class="token-function">NewHistogramVec</span>(
+		prometheus.HistogramOpts{
+			Name:    <span class="token-string">"agent_token_count"</span>,
+			Help:    <span class="token-string">"Number of tokens per agent request"</span>,
+			Buckets: []<span class="token-type">float64</span>{<span class="token-number">10</span>, <span class="token-number">50</span>, <span class="token-number">100</span>, <span class="token-number">500</span>, <span class="token-number">1000</span>, <span class="token-number">5000</span>, <span class="token-number">10000</span>},
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>, <span class="token-string">"token_type"</span>},
+	)
+
+	<span class="token-comment">// Database query duration in seconds</span>
+	<span class="token-comment">// Buckets: 1ms, 5ms, 10ms, 50ms, 100ms, 500ms, 1s</span>
+	DBQueryDuration = promauto.<span class="token-function">NewHistogramVec</span>(
+		prometheus.HistogramOpts{
+			Name:    <span class="token-string">"db_query_duration_seconds"</span>,
+			Help:    <span class="token-string">"Duration of database queries in seconds"</span>,
+			Buckets: []<span class="token-type">float64</span>{<span class="token-number">0.001</span>, <span class="token-number">0.005</span>, <span class="token-number">0.01</span>, <span class="token-number">0.05</span>, <span class="token-number">0.1</span>, <span class="token-number">0.5</span>, <span class="token-number">1.0</span>},
+		},
+		[]<span class="token-type">string</span>{<span class="token-string">"operation"</span>, <span class="token-string">"table"</span>},
+	)
+)</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="red-metrics--the-gold-standard" class="section-title fade-in">RED Metrics — The Gold Standard</h2>
+
+<p class="fade-in">RED stands for <strong>Rate</strong>, <strong>Errors</strong>, <strong>Duration</strong>. These three metrics give you complete visibility into your service's health.</p>
+
+<ul class="fade-in">
+  <li><strong>Rate</strong>: How many requests per second? (Counter → rate)</li>
+  <li><strong>Errors</strong>: How many errors per second? (Counter → rate of errors)</li>
+  <li><strong>Duration</strong>: How long do requests take? (Histogram → percentiles)</li>
+</ul>
+
+<p class="fade-in">Think of RED like a doctor's vital signs:</p>
+<ul class="fade-in">
+  <li><strong>Rate</strong> = heart rate (how fast is the service working?)</li>
+  <li><strong>Errors</strong> = fever (something is wrong)</li>
+  <li><strong>Duration</strong> = blood pressure (is the service stressed?)</li>
+</ul>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/red.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/red.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// RED metrics: Rate, Errors, Duration.</span>
+<span class="token-comment">// These three metrics give you complete service visibility.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why RED instead of just "total requests"?</span>
+<span class="token-comment">// Because knowing total requests is not enough.</span>
+<span class="token-comment">// You need to know:</span>
+<span class="token-comment">// 1. How fast is the service processing? (Rate)</span>
+<span class="token-comment">// 2. How often does it fail? (Errors)</span>
+<span class="token-comment">// 3. How long does each request take? (Duration)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Together, these tell you:</span>
+<span class="token-comment">// - Is the service healthy? (low error rate, normal latency)</span>
+<span class="token-comment">// - Is the service overloaded? (high rate, increasing latency)</span>
+<span class="token-comment">// - Is the service degraded? (high error rate, or high latency)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Only monitoring Rate.</span>
+<span class="token-comment">// If you only track requests per second, you miss:</span>
+<span class="token-comment">// - Errors (requests succeed but return 500)</span>
+<span class="token-comment">// - Latency (requests succeed but take 10 seconds)</span>
+<span class="token-comment">// Always track all three RED metrics.</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+)
+
+<span class="token-comment">// REDCollector provides RED metrics for a service</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why wrap metrics in a struct?</span>
+<span class="token-comment">// Because different services have different labels.</span>
+<span class="token-comment">// An HTTP service needs method, path, status.</span>
+<span class="token-comment">// A gRPC service needs method, code.</span>
+<span class="token-comment">// A database needs operation, table.</span>
+<span class="token-comment">// The struct pattern lets you customize labels per service.</span>
+<span class="token-keyword">type</span> REDCollector <span class="token-keyword">struct</span> {
+	<span class="token-comment">// Rate: requests per second</span>
+	requestsTotal *prometheus.CounterVec
+
+	<span class="token-comment">// Errors: error count</span>
+	errorsTotal *prometheus.CounterVec
+
+	<span class="token-comment">// Duration: request latency</span>
+	requestDuration *prometheus.HistogramVec
+}
+
+<span class="token-comment">// NewHTTPRED creates RED metrics for an HTTP service</span>
+<span class="token-comment">// Labels: method, path, status</span>
+<span class="token-keyword">func</span> <span class="token-function">NewHTTPRED</span>(namespace <span class="token-type">string</span>) *REDCollector {
+	<span class="token-keyword">return</span> &amp;REDCollector{
+		requestsTotal: prometheus.<span class="token-function">NewCounterVec</span>(
+			prometheus.CounterOpts{
+				Name: namespace + <span class="token-string">"_requests_total"</span>,
+				Help: <span class="token-string">"Total number of requests"</span>,
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>, <span class="token-string">"status"</span>},
+		),
+		errorsTotal: prometheus.<span class="token-function">NewCounterVec</span>(
+			prometheus.CounterOpts{
+				Name: namespace + <span class="token-string">"_errors_total"</span>,
+				Help: <span class="token-string">"Total number of errors"</span>,
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>, <span class="token-string">"error_type"</span>},
+		),
+		requestDuration: prometheus.<span class="token-function">NewHistogramVec</span>(
+			prometheus.HistogramOpts{
+				Name:    namespace + <span class="token-string">"_request_duration_seconds"</span>,
+				Help:    <span class="token-string">"Request duration in seconds"</span>,
+				Buckets: []<span class="token-type">float64</span>{<span class="token-number">0.01</span>, <span class="token-number">0.05</span>, <span class="token-number">0.1</span>, <span class="token-number">0.5</span>, <span class="token-number">1.0</span>, <span class="token-number">5.0</span>, <span class="token-number">10.0</span>},
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"method"</span>, <span class="token-string">"path"</span>},
+		),
+	}
+}
+
+<span class="token-comment">// NewAgentRED creates RED metrics for an agent service</span>
+<span class="token-comment">// Labels: agent_name, model</span>
+<span class="token-keyword">func</span> <span class="token-function">NewAgentRED</span>(namespace <span class="token-type">string</span>) *REDCollector {
+	<span class="token-keyword">return</span> &amp;REDCollector{
+		requestsTotal: prometheus.<span class="token-function">NewCounterVec</span>(
+			prometheus.CounterOpts{
+				Name: namespace + <span class="token-string">"_invocations_total"</span>,
+				Help: <span class="token-string">"Total number of agent invocations"</span>,
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>},
+		),
+		errorsTotal: prometheus.<span class="token-function">NewCounterVec</span>(
+			prometheus.CounterOpts{
+				Name: namespace + <span class="token-string">"_errors_total"</span>,
+				Help: <span class="token-string">"Total number of agent errors"</span>,
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>, <span class="token-string">"error_type"</span>},
+		),
+		requestDuration: prometheus.<span class="token-function">NewHistogramVec</span>(
+			prometheus.HistogramOpts{
+				Name:    namespace + <span class="token-string">"_inference_duration_seconds"</span>,
+				Help:    <span class="token-string">"Agent inference duration in seconds"</span>,
+				Buckets: []<span class="token-type">float64</span>{<span class="token-number">0.1</span>, <span class="token-number">0.5</span>, <span class="token-number">1.0</span>, <span class="token-number">2.0</span>, <span class="token-number">5.0</span>, <span class="token-number">10.0</span>, <span class="token-number">30.0</span>, <span class="token-number">60.0</span>},
+			},
+			[]<span class="token-type">string</span>{<span class="token-string">"agent_name"</span>, <span class="token-string">"model"</span>},
+		),
+	}
+}
+
+<span class="token-comment">// RecordRequest records a successful request</span>
+<span class="token-comment">// Parameters:</span>
+<span class="token-comment">// - labels: map of label names to values</span>
+<span class="token-comment">// - duration: how long the request took</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Forgetting to record duration.</span>
+<span class="token-comment">// If you only increment the counter, you can't calculate latency.</span>
+<span class="token-comment">// Always record both count and duration.</span>
+<span class="token-keyword">func</span> (r *REDCollector) <span class="token-function">RecordRequest</span>(labels prometheus.Labels, duration <span class="token-type">float64</span>) {
+	r.requestsTotal.<span class="token-function">With</span>(labels).<span class="token-function">Inc</span>()
+	r.requestDuration.<span class="token-function">With</span>(labels).<span class="token-function">Observe</span>(duration)
+}
+
+<span class="token-comment">// RecordError records a failed request</span>
+<span class="token-comment">// Parameters:</span>
+<span class="token-comment">// - labels: map of label names to values (include error_type)</span>
+<span class="token-comment">// - duration: how long the request took before failing</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why record duration for errors too?</span>
+<span class="token-comment">// Because error duration tells you if errors are fast (immediate rejection)</span>
+<span class="token-comment">// or slow (timeout after 30 seconds). Slow errors are worse because</span>
+<span class="token-comment">// they consume resources while failing.</span>
+<span class="token-keyword">func</span> (r *REDCollector) <span class="token-function">RecordError</span>(labels prometheus.Labels, duration <span class="token-type">float64</span>) {
+	r.errorsTotal.<span class="token-function">With</span>(labels).<span class="token-function">Inc</span>()
+	r.requestDuration.<span class="token-function">With</span>(labels).<span class="token-function">Observe</span>(duration)
+}
+
+<span class="token-comment">// Describe sends the metric descriptions to the channel</span>
+<span class="token-comment">// This is required by the prometheus.Collector interface</span>
+<span class="token-keyword">func</span> (r *REDCollector) <span class="token-function">Describe</span>(ch <span class="token-keyword">chan</span>&lt;- *prometheus.Desc) {
+	r.requestsTotal.<span class="token-function">Describe</span>(ch)
+	r.errorsTotal.<span class="token-function">Describe</span>(ch)
+	r.requestDuration.<span class="token-function">Describe</span>(ch)
+}
+
+<span class="token-comment">// Collect gathers the metric values and sends them to the channel</span>
+<span class="token-comment">// This is required by the prometheus.Collector interface</span>
+<span class="token-keyword">func</span> (r *REDCollector) <span class="token-function">Collect</span>(ch <span class="token-keyword">chan</span>&lt;- prometheus.Metric) {
+	r.requestsTotal.<span class="token-function">Collect</span>(ch)
+	r.errorsTotal.<span class="token-function">Collect</span>(ch)
+	r.requestDuration.<span class="token-function">Collect</span>(ch)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="http-middleware--automatic-instrumentation" class="section-title fade-in">HTTP Middleware — Automatic Instrumentation</h2>
+
+<p class="fade-in">Instead of manually instrumenting every handler, use middleware to automatically track RED metrics for all HTTP requests.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/middleware.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/middleware.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// HTTP middleware that automatically instruments requests with RED metrics.</span>
+<span class="token-comment">// Wrap your handlers with this middleware and all requests are tracked.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why use middleware instead of manual instrumentation?</span>
+<span class="token-comment">// 1. Consistency — every request is tracked the same way</span>
+<span class="token-comment">// 2. Completeness — you can't forget to instrument a handler</span>
+<span class="token-comment">// 3. Separation of concerns — business logic doesn't know about metrics</span>
+<span class="token-comment">// 4. Maintainability — metrics logic is in one place</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Not wrapping all handlers.</span>
+<span class="token-comment">// If you forget to wrap a handler, its metrics are missing.</span>
+<span class="token-comment">// This creates blind spots in your monitoring.</span>
+<span class="token-comment">// Use a router-level middleware to wrap ALL handlers automatically.</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"net/http"</span>
+	<span class="token-string">"strconv"</span>
+	<span class="token-string">"time"</span>
+
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+)
+
+<span class="token-comment">// responseWriter wraps http.ResponseWriter to capture the status code</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why wrap ResponseWriter?</span>
+<span class="token-comment">// Because http.ResponseWriter doesn't expose the status code after writing.</span>
+<span class="token-comment">// The handler calls WriteHeader(code), but there's no way to read it back.</span>
+<span class="token-comment">// By wrapping it, we capture the status code when WriteHeader is called.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Not implementing http.Flusher.</span>
+<span class="token-comment">// Some middleware (like gzip) calls Flush() on the ResponseWriter.</span>
+<span class="token-comment">// If your wrapper doesn't implement Flusher, it panics.</span>
+<span class="token-comment">// Always implement Flusher and Hijacker if your wrapper wraps ResponseWriter.</span>
+<span class="token-keyword">type</span> responseWriter <span class="token-keyword">struct</span> {
+	http.ResponseWriter
+	statusCode <span class="token-type">int</span>
+	written    <span class="token-type">bool</span>
+}
+
+<span class="token-comment">// NewResponseWriter creates a wrapped ResponseWriter</span>
+<span class="token-comment">// Default status code is 200 (OK) — in case WriteHeader is never called.</span>
+<span class="token-keyword">func</span> <span class="token-function">NewResponseWriter</span>(w http.ResponseWriter) *responseWriter {
+	<span class="token-keyword">return</span> &amp;responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+}
+
+<span class="token-comment">// WriteHeader captures the status code</span>
+<span class="token-comment">// This is called before Write — it sets the HTTP status code.</span>
+<span class="token-keyword">func</span> (rw *responseWriter) <span class="token-function">WriteHeader</span>(code <span class="token-type">int</span>) {
+	<span class="token-keyword">if</span> !rw.written {
+		rw.statusCode = code
+		rw.written = <span class="token-keyword">true</span>
+	}
+	rw.ResponseWriter.<span class="token-function">WriteHeader</span>(code)
+}
+
+<span class="token-comment">// Write captures that data was written</span>
+<span class="token-comment">// This is called after WriteHeader — it sends the response body.</span>
+<span class="token-keyword">func</span> (rw *responseWriter) <span class="token-function">Write</span>(b []<span class="token-type">byte</span>) (<span class="token-type">int</span>, <span class="token-type">error</span>) {
+	<span class="token-keyword">if</span> !rw.written {
+		rw.written = <span class="token-keyword">true</span>
+	}
+	<span class="token-keyword">return</span> rw.ResponseWriter.<span class="token-function">Write</span>(b)
+}
+
+<span class="token-comment">// Flush implements http.Flusher</span>
+<span class="token-comment">// This is needed for streaming responses and gzip middleware.</span>
+<span class="token-keyword">func</span> (rw *responseWriter) <span class="token-function">Flush</span>() {
+	<span class="token-keyword">if</span> f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.<span class="token-function">Flush</span>()
+	}
+}
+
+<span class="token-comment">// PrometheusMiddleware creates an HTTP middleware that tracks RED metrics</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Usage:</span>
+<span class="token-comment">//</span>
+<span class="token-comment">//	mux := http.NewServeMux()</span>
+<span class="token-comment">//	mux.Handle("/api/agents", myHandler)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">//	// Wrap all handlers with the middleware</span>
+<span class="token-comment">//	http.Handle("/", metrics.PrometheusMiddleware(mux))</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: How the middleware works</span>
+<span class="token-comment">// 1. Request arrives at the middleware</span>
+<span class="token-comment">// 2. Middleware wraps the ResponseWriter to capture status code</span>
+<span class="token-comment">// 3. Middleware records the start time</span>
+<span class="token-comment">// 4. Middleware calls the next handler</span>
+<span class="token-comment">// 5. When the handler writes the response, the wrapped ResponseWriter</span>
+<span class="token-comment">//    captures the status code</span>
+<span class="token-comment">// 6. Middleware calculates the duration</span>
+<span class="token-comment">// 7. Middleware records the RED metrics</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// This is transparent to the handler — it doesn't know it's being monitored.</span>
+<span class="token-keyword">func</span> <span class="token-function">PrometheusMiddleware</span>(next http.Handler) http.Handler {
+	<span class="token-keyword">return</span> http.<span class="token-function">HandlerFunc</span>(<span class="token-keyword">func</span>(w http.ResponseWriter, r *http.Request) {
+		<span class="token-comment">// Record the start time</span>
+		start := time.<span class="token-function">Now</span>()
+
+		<span class="token-comment">// Wrap the ResponseWriter to capture status code</span>
+		rw := <span class="token-function">NewResponseWriter</span>(w)
+
+		<span class="token-comment">// Call the next handler</span>
+		next.<span class="token-function">ServeHTTP</span>(rw, r)
+
+		<span class="token-comment">// Calculate duration</span>
+		duration := time.<span class="token-function">Since</span>(start).<span class="token-function">Seconds</span>()
+
+		<span class="token-comment">// Extract labels</span>
+		<span class="token-comment">// COMMON MISTAKE: Using the full URL path as a label.</span>
+		<span class="token-comment">// If you have /api/agents/123 and /api/agents/456,</span>
+		<span class="token-comment">// these are two different label values, creating two time series.</span>
+		<span class="token-comment">// With millions of agents, you'd have millions of time series.</span>
+		<span class="token-comment">// This is a cardinality explosion — it kills Prometheus performance.</span>
+		<span class="token-comment">// Always use route patterns (/api/agents/:id) not actual paths.</span>
+		status := strconv.<span class="token-function">Itoa</span>(rw.statusCode)
+		path := r.URL.Path
+
+		<span class="token-comment">// Determine if this is an error</span>
+		<span class="token-comment">// DEEP DIVE: What constitutes an error?</span>
+		<span class="token-comment">// - 4xx: client errors (not the server's fault)</span>
+		<span class="token-comment">// - 5xx: server errors (the server's fault)</span>
+		<span class="token-comment">// We track both, but separately. Server errors are more critical.</span>
+		<span class="token-keyword">if</span> rw.statusCode &gt;= <span class="token-number">500</span> {
+			<span class="token-comment">// Server error — record in both requests and errors</span>
+			HTTPRequestTotal.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+				<span class="token-string">"status"</span>: status,
+			}).<span class="token-function">Inc</span>()
+
+			HTTPErrorsTotal.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>:     r.Method,
+				<span class="token-string">"path"</span>:       path,
+				<span class="token-string">"error_type"</span>: <span class="token-string">"server_error"</span>,
+			}).<span class="token-function">Inc</span>()
+
+			HTTPRequestDuration.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+			}).<span class="token-function">Observe</span>(duration)
+		} <span class="token-keyword">else</span> <span class="token-keyword">if</span> rw.statusCode &gt;= <span class="token-number">400</span> {
+			<span class="token-comment">// Client error — record in requests only</span>
+			HTTPRequestTotal.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+				<span class="token-string">"status"</span>: status,
+			}).<span class="token-function">Inc</span>()
+
+			HTTPRequestDuration.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+			}).<span class="token-function">Observe</span>(duration)
+		} <span class="token-keyword">else</span> {
+			<span class="token-comment">// Success — record in requests only</span>
+			HTTPRequestTotal.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+				<span class="token-string">"status"</span>: status,
+			}).<span class="token-function">Inc</span>()
+
+			HTTPRequestDuration.<span class="token-function">With</span>(prometheus.Labels{
+				<span class="token-string">"method"</span>: r.Method,
+				<span class="token-string">"path"</span>:   path,
+			}).<span class="token-function">Observe</span>(duration)
+		}
+	})
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="exposing-the-metrics-endpoint" class="section-title fade-in">Exposing the /metrics Endpoint</h2>
+
+<p class="fade-in">Prometheus scrapes your service's <code>/metrics</code> endpoint to collect metrics. You need to expose this endpoint using <code>promhttp.Handler()</code>.</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">internal/metrics/server.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// internal/metrics/server.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Sets up the /metrics endpoint for Prometheus scraping.</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: How Prometheus scraping works</span>
+<span class="token-comment">// 1. Prometheus server is configured with your service's URL</span>
+<span class="token-comment">// 2. Every 15-30 seconds (configurable), Prometheus makes an HTTP GET</span>
+<span class="token-comment">//    to your /metrics endpoint</span>
+<span class="token-comment">// 3. Your service responds with all current metrics in text format</span>
+<span class="token-comment">// 4. Prometheus parses the response and stores the values</span>
+<span class="token-comment">// 5. Prometheus can then query the metrics using PromQL</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// The metrics endpoint returns a plain text format:</span>
+<span class="token-comment">//   # HELP http_requests_total Total number of HTTP requests</span>
+<span class="token-comment">//   # TYPE http_requests_total counter</span>
+<span class="token-comment">//   http_requests_total{method="GET",path="/api/agents",status="200"} 1234</span>
+<span class="token-comment">//   http_requests_total{method="POST",path="/api/agents",status="201"} 567</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Not registering custom metrics.</span>
+<span class="token-comment">// If you create a metric but don't register it, it won't appear</span>
+<span class="token-comment">// in the /metrics response. Use prometheus.MustRegister() or</span>
+<span class="token-comment">// promauto to ensure registration.</span>
+
+<span class="token-keyword">package</span> metrics
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"net/http"</span>
+
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus/promhttp"</span>
+)
+
+<span class="token-comment">// MetricsServer creates an HTTP server for the /metrics endpoint</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// Usage:</span>
+<span class="token-comment">//</span>
+<span class="token-comment">//	// Start the metrics server on port 9090</span>
+<span class="token-comment">//	go metrics.MetricsServer(":9090")</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// DEEP DIVE: Why a separate server?</span>
+<span class="token-comment">// Because the metrics endpoint should be on a different port than</span>
+<span class="token-comment">// your application. Reasons:</span>
+<span class="token-comment">// 1. Security — don't expose internal metrics to external traffic</span>
+<span class="token-comment">// 2. Performance — metrics scraping shouldn't affect request latency</span>
+<span class="token-comment">// 3. Isolation — if your app crashes, the metrics endpoint still works</span>
+<span class="token-comment">//    (if it's in the same process, it crashes too)</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// COMMON MISTAKE: Using the same port for metrics and application.</span>
+<span class="token-comment">// If your application is under load, metrics scraping adds overhead.</span>
+<span class="token-comment">// If the application crashes, metrics are unavailable.</span>
+<span class="token-comment">// Always use a separate port for metrics.</span>
+<span class="token-keyword">func</span> <span class="token-function">MetricsServer</span>(addr <span class="token-type">string</span>) <span class="token-type">error</span> {
+	mux := http.<span class="token-function">NewServeMux</span>()
+
+	<span class="token-comment">// promhttp.Handler() returns an HTTP handler that serves all</span>
+	<span class="token-comment">// registered Prometheus metrics in the default registry.</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// DEEP DIVE: What's in the default registry?</span>
+	<span class="token-comment">// All metrics created with promauto.New* are automatically</span>
+	<span class="token-comment">// registered in the default registry. promhttp.Handler()</span>
+	<span class="token-comment">// serves everything in that registry.</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// If you need custom registries (for multi-tenant scenarios),</span>
+	<span class="token-comment">// use promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).</span>
+	mux.<span class="token-function">Handle</span>(<span class="token-string">"/metrics"</span>, promhttp.<span class="token-function">Handler</span>())
+
+	<span class="token-comment">// Add a health check endpoint</span>
+	<span class="token-comment">// Prometheus sometimes needs to know if the metrics endpoint is alive</span>
+	mux.<span class="token-function">HandleFunc</span>(<span class="token-string">"/health"</span>, <span class="token-keyword">func</span>(w http.ResponseWriter, r *http.Request) {
+		w.<span class="token-function">WriteHeader</span>(http.StatusOK)
+		w.<span class="token-function">Write</span>([]<span class="token-type">byte</span>(<span class="token-string">"OK"</span>))
+	})
+
+	<span class="token-comment">// Start the server</span>
+	<span class="token-comment">// DEEP DIVE: Why use http.ListenAndServe?</span>
+	<span class="token-comment">// Because it handles:</span>
+	<span class="token-comment">// - Graceful shutdown on SIGTERM</span>
+	<span class="token-comment">// - Connection draining</span>
+	<span class="token-comment">// - TLS termination (if configured)</span>
+	<span class="token-comment">//</span>
+	<span class="token-comment">// COMMON MISTAKE: Not handling server errors.</span>
+	<span class="token-comment">// ListenAndServe returns an error if the server can't start.</span>
+	<span class="token-comment">// This happens if:</span>
+	<span class="token-comment">// - The port is already in use</span>
+	<span class="token-comment">// - The address is invalid</span>
+	<span class="token-comment">// - Permission denied (ports &lt; 1024 require root)</span>
+	<span class="token-keyword">return</span> http.<span class="token-function">ListenAndServe</span>(addr, mux)
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="putting-it-all-together" class="section-title fade-in">Putting It All Together</h2>
+
+<p class="fade-in">Here's how all the pieces fit in a complete Go service:</p>
+
+<div class="code-block fade-in">
+  <div class="code-header">
+    <span class="code-lang">go</span>
+    <span class="code-filename">cmd/server/main.go</span>
+    <button class="code-copy" aria-label="Copy code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      Copy
+    </button>
+  </div>
+  <div class="code-body"><pre><code><span class="token-comment">// cmd/server/main.go</span>
+<span class="token-comment">//</span>
+<span class="token-comment">// The entry point for an instrumented Go service.</span>
+<span class="token-comment">// This shows how to wire up RED metrics, middleware, and the metrics server.</span>
+
+<span class="token-keyword">package</span> main
+
+<span class="token-keyword">import</span> (
+	<span class="token-string">"fmt"</span>
+	<span class="token-string">"log"</span>
+	<span class="token-string">"net/http"</span>
+	<span class="token-string">"os"</span>
+	<span class="token-string">"time"</span>
+
+	<span class="token-string">"my-service/internal/metrics"</span>
+
+	<span class="token-string">"github.com/prometheus/client_golang/prometheus"</span>
+)
+
+<span class="token-keyword">func</span> main() {
+	<span class="token-comment">// Create RED metrics for the HTTP service</span>
+	redMetrics := metrics.<span class="token-function">NewHTTPRED</span>(<span class="token-string">"my_service"</span>)
+
+	<span class="token-comment">// Create the HTTP mux</span>
+	mux := http.<span class="token-function">NewServeMux</span>()
+
+	<span class="token-comment">// Register handlers</span>
+	mux.<span class="token-function">HandleFunc</span>(<span class="token-string">"/api/agents"</span>, <span class="token-keyword">func</span>(w http.ResponseWriter, r *http.Request) {
+		start := time.<span class="token-function">Now</span>()
+
+		<span class="token-comment">// Simulate some work</span>
+		time.<span class="token-function">Sleep</span>(<span class="token-number">10</span> * time.Millisecond)
+
+		<span class="token-comment">// Record successful request</span>
+		redMetrics.<span class="token-function">RecordRequest</span>(prometheus.Labels{
+			<span class="token-string">"method"</span>: r.Method,
+			<span class="token-string">"path"</span>:   <span class="token-string">"/api/agents"</span>,
+			<span class="token-string">"status"</span>: <span class="token-string">"200"</span>,
+		}, time.<span class="token-function">Since</span>(start).<span class="token-function">Seconds</span>())
+
+		w.<span class="token-function">WriteHeader</span>(http.StatusOK)
+		fmt.<span class="token-function">Fprintf</span>(w, <span class="token-string">`{"agents": []}`</span>)
+	})
+
+	<span class="token-comment">// Wrap all handlers with the metrics middleware</span>
+	<span class="token-comment">// This automatically tracks RED metrics for all requests</span>
+	handler := metrics.<span class="token-function">PrometheusMiddleware</span>(mux)
+
+	<span class="token-comment">// Start the metrics server on a separate port</span>
+	<span class="token-keyword">go</span> <span class="token-keyword">func</span>() {
+		log.<span class="token-function">Println</span>(<span class="token-string">"Metrics server starting on :9090"</span>)
+		<span class="token-keyword">if</span> err := metrics.<span class="token-function">MetricsServer</span>(<span class="token-string">":9090"</span>); err != <span class="token-keyword">nil</span> {
+			log.<span class="token-function">Fatalf</span>(<span class="token-string">"Metrics server failed: %v"</span>, err)
+		}
+	}()
+
+	<span class="token-comment">// Start the main server</span>
+	log.<span class="token-function">Println</span>(<span class="token-string">"Application server starting on :8080"</span>)
+	<span class="token-keyword">if</span> err := http.<span class="token-function">ListenAndServe</span>(<span class="token-string">":8080"</span>, handler); err != <span class="token-keyword">nil</span> {
+		log.<span class="token-function">Fatalf</span>(<span class="token-string">"Application server failed: %v"</span>, err)
+	}
+}</code></pre></div>
+</div>
+
+<hr class="fade-in">
+
+<h2 id="key-takeaways" class="section-title fade-in">Key Takeaways</h2>
+
+<ol class="fade-in">
+  <li><strong>Counter</strong> only goes up. Use for cumulative totals (total requests, total errors). Calculate rates with <code>rate()</code>.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Gauge</strong> goes up and down. Use for current values (active connections, queue length, memory usage).</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Histogram</strong> tracks distributions. Use for latency and size. Choose bucket boundaries carefully.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>RED metrics</strong> (Rate, Errors, Duration) give you complete service visibility. Always track all three.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Labels</strong> add dimensions to metrics. But avoid high-cardinality labels (user IDs, request IDs) — they create too many time series.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Middleware</strong> automates instrumentation. Wrap all handlers to ensure consistent metrics.</li>
+</ol>
+
+<ol class="fade-in">
+  <li><strong>Separate port</strong> for metrics. Don't expose internal metrics on your public port.</li>
+</ol>
+
+<hr class="fade-in">
+
+<h2 id="whats-next" class="section-title fade-in">What's Next</h2>
+
+<p class="fade-in">In Module 13, you'll connect Go and Elixir using gRPC. The protobuf contracts define the interface, and gRPC handles the serialization and transport — the bridge between your infrastructure edge and agent brain.</p>
+
+      </div>
+
+      <div class="module-nav fade-in" style="display:flex;justify-content:space-between;margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border-subtle);">
+        <a href="11-go-k8s-operators.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">← Go K8s Operators</a>
+        <a href="13-grpc-bridge.html" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;">Bridge: gRPC →</a>
+      </div>
+
+      <div class="agnt-badge fade-in">
+        <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener" class="agnt-badge-inner">
+          <span class="agnt-badge-icon">A</span>
+          <span class="agnt-badge-text">Powered by <strong>AGNT</strong> — Software Factory for the AI Era</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="agnt-footer">
+    <p>Built with <a href="https://github.com/huvaxstra/AGNT" target="_blank" rel="noopener">AGNT</a> · Hybrid Elixir/Go Agentic Platform Engineering · 16 Weeks</p>
+  </footer>
+
+  <script src="../js/app.js"></script>
+</body>
+</html>

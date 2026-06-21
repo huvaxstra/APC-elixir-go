@@ -1,0 +1,56 @@
+# ConfigMap — Non-sensitive configuration for the agentic platform
+# Sensitive values (passwords, keys) belong in Secrets, not here.
+# ConfigMaps are base64-encoded, NOT encrypted.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentic-platform-config
+  labels:
+    app: agentic-platform
+data:
+  # Phoenix configuration
+  PHOENIX_ENV: "prod"
+  PHOENIX_HOST: "0.0.0.0"
+  PHOENIX_PORT: "4000"
+  PHOENIX_SERVER: "true"
+
+  # Elixir distributed Erlang — node naming for BEAM clustering
+  # WHY: This pattern lets libcluster discover nodes via K8s DNS.
+  # Each pod gets a unique name: agentic-platform-<pod-IP>@<pod-FQDN>
+  RELEASE_DISTRIBUTION: "name"
+  ERL_AFLAGS: "-proto_dist inet_tcp"
+
+  # Logging level (debug, info, warning, error)
+  LOG_LEVEL: "info"
+
+  # OpenTelemetry collector endpoint
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.telemetry.svc.cluster.local:4317"
+
+  # Prometheus metrics port
+  PROMETHEUS_PORT: "9090"
+
+---
+# Go Gateway ConfigMap
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-gateway-config
+  labels:
+    app: agent-gateway
+data:
+  # gRPC server port
+  GRPC_PORT: "50051"
+
+  # HTTP server port (Prometheus metrics + health checks)
+  HTTP_PORT: "8080"
+
+  # Log level
+  LOG_LEVEL: "info"
+
+  # Prometheus metrics path
+  METRICS_PATH: "/metrics"
+
+  # Health check path
+  HEALTH_PATH: "/healthz"
